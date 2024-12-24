@@ -292,7 +292,10 @@ class _AddTextFormState extends State<AddTextForm> {
                         onPressed: displayedText.isEmpty ||
                                 (displayedText['text'] as String).isEmpty
                             ? null
-                            : () {},
+                            : () {
+                                Navigator.of(context, rootNavigator: true)
+                                    .pop();
+                              },
                         child: const Text(
                           'Done',
                         ),
