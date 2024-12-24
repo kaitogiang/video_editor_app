@@ -1,0 +1,101 @@
+name: video_editor_app
+description: "A new Flutter project."
+# The following line prevents the package from being accidentally published to
+# pub.dev using `flutter pub publish`. This is preferred for private packages.
+publish_to: "none" # Remove this line if you wish to publish to pub.dev
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.5.3
+
+dependencies:
+  flutter:
+    sdk: flutter
+  image_picker: ^1.1.2
+  flutter_svg: ^2.0.5
+  google_fonts: ^6.2.1
+  flex_color_picker: ^3.6.0
+  # video_editor: ^3.0.0
+
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/icons/
+  # To add assets to your application, add an assets section, like this:
+  # assets:
+  #   - images/a_dot_burr.jpeg
+  #   - images/a_dot_ham.jpeg
+
+  # An image asset can refer to one or more resolution-specific "variants", see
+  # https://flutter.dev/to/resolution-aware-images
+
+  # For details regarding adding assets from package dependencies, see
+  # https://flutter.dev/to/asset-from-package
+
+  # To add custom fonts to your application, add a fonts section here,
+  # in this "flutter" section. Each entry in this list should have a
+  # "family" key with the font family name, and a "fonts" key with a
+  # list giving the asset and other descriptors for the font. For
+  # example:
+  fonts:
+    - family: PlaywriteDEVAGuides
+      fonts:
+        - asset: fonts/PlaywriteDEVAGuides-Regular.ttf
+    #       - asset: fonts/Schyler-Italic.ttf
+    #         style: italic
+    - family: Times New Roman
+      fonts:
+        - asset: fonts/font-times-new-roman.ttf
+    - family: Arial
+      fonts:
+        - asset: fonts/ARIAL.TTF
+    - family: Garamond
+      fonts:
+        - asset: fonts/garamond_[allfont.ru].ttf
+    - family: Garamond
+      fonts:
+        - asset: fonts/garamond_[allfont.ru].ttf
+    - family: BrushyScript
+      fonts:
+        - asset: fonts/BrushyScript-ALWEg.ttf
+    - family: HelveticaNeueBlack
+      fonts:
+        - asset: fonts/HelveticaNeueBlack.otf
+    - family: Vantgard
+      fonts:
+        - asset: fonts/Vantgard.otf
+    - family: Graceful
+      fonts:
+        - asset: fonts/GRACEFUL.otf
+    - family: Manuscript
+      fonts:
+        - asset: fonts/MANUSCRIPT.otf
+    - family: Rosalin
+      fonts:
+        - asset: fonts/RosalinMarigeRegular-OGG83.ttf
+    - family: Mystiqua
+      fonts:
+        - asset: fonts/Mystiqua.otf
+    - family: Moaze
+      fonts:
+        - asset: fonts/MAOZE.otf
+    - family: Delphine
+      fonts:
+        - asset: fonts/Delphine_Regular.otf
+    - family: Galter
+      fonts:
+        - asset: fonts/Galter.otf
+
+  #
+  # For details regarding fonts from package dependencies,
+  # see https://flutter.dev/to/font-from-package
