@@ -6,10 +6,13 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_editor/video_editor.dart';
 import 'package:video_editor_app/video_editor/utils/shared_method.dart';
+import 'package:video_editor_app/video_editor/views/home_screen/default_video_editor_screen.dart';
 import 'package:video_editor_app/video_editor/views/home_screen/video_editor_screen.dart';
 import 'package:video_editor_app/video_editor/widgets/add_text_form.dart';
 import 'package:video_editor_app/video_editor/widgets/bottom_modal.dart';
+import 'package:video_editor_app/video_editor/widgets/loading_screen.dart';
 import 'package:video_editor_app/video_editor/widgets/select_options.dart';
+import 'package:video_player/video_player.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -87,46 +90,17 @@ class _HomeScreenState extends State<HomeScreen> {
             valueListenable: _selectedFile,
             builder: (context, selectedFile, child) {
               return selectedFile == null
-                  ? FractionallySizedBox(
+                  ? const FractionallySizedBox(
                       widthFactor: 1,
                       heightFactor: 1,
-                      child: Container(
-                        decoration: const BoxDecoration(
-                          color: Colors.red,
-                        ),
-                        child: const Text('No video here :))'),
-                      ),
+                      child: DefaultVideoEditorScreen(),
                     )
-                  : VideoEditorScreen(controller: _videoEditorController);
+                  //When the file is selected
+                  : _videoEditorController.initialized
+                      ? VideoEditorScreen(controller: _videoEditorController)
+                      : const CircularProgressIndicator();
             },
           ),
-          // Column(
-          //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          //   children: [
-          //     Expanded(
-          //       child: ValueListenableBuilder(
-          //           valueListenable: _selectedFile,
-          //           builder: (context, selectedFile, child) {
-          //             return Container(
-          //               decoration: BoxDecoration(
-          //                 color: theme.colorScheme.secondary,
-          //               ),
-          //               // child: (selectedFile != null)
-          //               //     ? Image.file(selectedFile)
-          //               //     : Container(),
-          //               child: Container(),
-          //             );
-          //           }),
-          //     ),
-          //     Expanded(
-          //       child: Container(
-          //         decoration: BoxDecoration(
-          //           color: theme.colorScheme.surface,
-          //         ),
-          //       ),
-          //     ),
-          //   ],
-          // ),
           //the floating action button with custom position
           Positioned(
             right: 10,
@@ -145,10 +119,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     //if the selected file is not null, then initialize the video editor controller
                     if (file != null) {
                       // _initializeVideoEditorController(file);
+
+                      //Create videplayer to access the duration properties, then
+                      //use this value to pass to the video editor controller
                       _videoEditorController = VideoEditorController.file(
                         file,
                         minDuration: const Duration(seconds: 1),
-                        maxDuration: const Duration(seconds: 10),
+                        maxDuration: const Duration(seconds: 30),
                       );
 
                       await _videoEditorController
@@ -214,6 +191,9 @@ class _HomeScreenState extends State<HomeScreen> {
           },
           'Choose video from gallery': () async {
             final videoFile = await _selectVideoFromGallery();
+            final videoPlayerController = VideoPlayerController.file(videoFile!)
+              ..initialize();
+            log('Video player controller in _buildOptionDialog: ${videoPlayerController.value.duration}');
             Navigator.of(context, rootNavigator: true).pop(videoFile);
           },
           'Record video': _recordVideo,

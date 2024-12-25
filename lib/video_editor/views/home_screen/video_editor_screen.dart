@@ -1,4 +1,7 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
+import 'package:video_editor/ui/video_viewer.dart';
 import 'package:video_editor/video_editor.dart';
 
 class VideoEditorScreen extends StatefulWidget {
@@ -12,6 +15,17 @@ class VideoEditorScreen extends StatefulWidget {
 
 class _VideoEditorScreenState extends State<VideoEditorScreen> {
   final double height = 60;
+
+  @override
+  void initState() {
+    super.initState();
+    log('Controller status: ${widget.controller.initialized}');
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+  }
 
   String formatter(Duration duration) => [
         duration.inMinutes.remainder(60).toString().padLeft(2, '0'),
@@ -28,9 +42,10 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
         builder: (context, child) {
           final int duration = widget.controller.videoDuration.inSeconds;
           final double pos = widget.controller.trimPosition * duration;
-
+          log('Video Duration in second: $duration');
+          log('Pos value: $pos');
           return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 60 / 4),
+            padding: EdgeInsets.symmetric(horizontal: height / 4),
             child: Row(
               children: [
                 Text(formatter(Duration(seconds: pos.toInt()))),
@@ -117,24 +132,37 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
                         child: TabBarView(
                           physics: const NeverScrollableScrollPhysics(),
                           children: [
+                            //Display the video player with the play button overlapped
                             Stack(
                               alignment: Alignment.center,
                               children: [
                                 //The widget that will be showed the crop area overlapped the video
                                 //The user can see the desired crop area.
-                                CropGridViewer.preview(
-                                  controller: widget.controller,
-                                ),
+                                // CropGridViewer.preview(
+                                //   controller: widget.controller,
+                                // ),
+                                //The widget for showing the video preview for the user to see
+                                VideoViewer(controller: widget.controller),
+                                //Building the player Icon that allows user click on it
+                                //By default, the icon is visile and the video is not play.
+                                //When the video is playing, the widget.controller.isPlayer return true,
+                                //so the icon will be transparent by setting the opacity to zero.
+                                //The value range of opacity from 0 to 1, 0 is fully transparent, 1 is fully visible
                                 AnimatedBuilder(
+                                  //The animation property of AnimatedBuilder is used to specify the Animation or AnimationController instance
+                                  //which will be observed by the AnimatedBuilder. If the animation value is changed
+                                  //The builder property of AnimatedBuilder will require a new build call and rebuild Widget
+                                  //In this context, we will observe the video property of VideoEditorController.
+                                  //Whenever the video is playing or stopping, it will trigger the rebuild
                                   animation: widget.controller.video,
                                   builder: (context, child) => AnimatedOpacity(
                                     opacity:
-                                        widget.controller.isPlaying ? 0 : 1,
+                                        widget.controller.isPlaying ? 0.5 : 1,
                                     duration: kThemeAnimationDuration,
                                     child: GestureDetector(
                                       onTap: widget.controller.video.play,
                                       child: Container(
-                                        width: 40,
+                                        width: 100,
                                         height: 40,
                                         decoration: const BoxDecoration(
                                           color: Colors.white,
