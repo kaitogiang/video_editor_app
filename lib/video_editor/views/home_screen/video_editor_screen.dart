@@ -157,8 +157,9 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
                                   animation: widget.controller.video,
                                   builder: (context, child) => AnimatedOpacity(
                                     opacity:
-                                        widget.controller.isPlaying ? 0.5 : 1,
-                                    duration: kThemeAnimationDuration,
+                                        widget.controller.isPlaying ? 0 : 1,
+                                    duration:
+                                        kThemeAnimationDuration, //kThemeAnimationDuration is a standard constant
                                     child: GestureDetector(
                                       onTap: widget.controller.video.play,
                                       child: Container(
@@ -185,14 +186,24 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
                         ),
                       ),
                       //Showing the below section
+                      //A container for containing all the widget below such as
+                      //TabBar and TimeLine
                       Container(
-                        height: 200,
+                        height: 300,
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                        ),
                         margin: const EdgeInsets.only(top: 10),
                         child: Column(
                           children: [
+                            //In this context, We will use one TabBar for controlling the two
+                            //TabBarView above. The first TabBarView for showing the above section,
+                            //The second TabBarView for showing the below section
+                            //When we click on a specific tab in TabBarView, the both TabBarView will select the
+                            //corresponding page index in the TabBarView.
                             const TabBar(
                               tabs: [
-                                //The first Button
+                                //The first Button, the Trim button for trim the video
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
@@ -203,10 +214,11 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
                                     Text('Trim'),
                                   ],
                                 ),
-                                //The second button
+                                //The second button, the cover button for showing each frame in
+                                //the video.
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
-                                  children: const [
+                                  children: [
                                     Padding(
                                       padding: EdgeInsets.all(5),
                                       child: Icon(Icons.video_label),
@@ -217,13 +229,16 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
                               ],
                             ),
                             Expanded(
+                              //Display the two below section, The first is timeline and the second is cover page
                               child: TabBarView(
                                 physics: const NeverScrollableScrollPhysics(),
                                 children: [
+                                  //Showing the timeline that center the TrimSlider
                                   Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: _trimSlider(),
                                   ),
+                                  //Showing the cover selection
                                   _coverSelection()
                                 ],
                               ),
