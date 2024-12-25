@@ -6,6 +6,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_editor/video_editor.dart';
 import 'package:video_editor_app/video_editor/utils/shared_method.dart';
+import 'package:video_editor_app/video_editor/views/home_screen/video_editor_screen.dart';
 import 'package:video_editor_app/video_editor/widgets/add_text_form.dart';
 import 'package:video_editor_app/video_editor/widgets/bottom_modal.dart';
 import 'package:video_editor_app/video_editor/widgets/select_options.dart';
@@ -82,33 +83,50 @@ class _HomeScreenState extends State<HomeScreen> {
       body: Stack(
         children: [
           //The main content
-          Column(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: ValueListenableBuilder(
-                    valueListenable: _selectedFile,
-                    builder: (context, selectedFile, child) {
-                      return Container(
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.secondary,
+          ValueListenableBuilder(
+            valueListenable: _selectedFile,
+            builder: (context, selectedFile, child) {
+              return selectedFile == null
+                  ? FractionallySizedBox(
+                      widthFactor: 1,
+                      heightFactor: 1,
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
                         ),
-                        // child: (selectedFile != null)
-                        //     ? Image.file(selectedFile)
-                        //     : Container(),
-                        child: Container(),
-                      );
-                    }),
-              ),
-              Expanded(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surface,
-                  ),
-                ),
-              ),
-            ],
+                        child: const Text('No video here :))'),
+                      ),
+                    )
+                  : VideoEditorScreen(controller: _videoEditorController);
+            },
           ),
+          // Column(
+          //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          //   children: [
+          //     Expanded(
+          //       child: ValueListenableBuilder(
+          //           valueListenable: _selectedFile,
+          //           builder: (context, selectedFile, child) {
+          //             return Container(
+          //               decoration: BoxDecoration(
+          //                 color: theme.colorScheme.secondary,
+          //               ),
+          //               // child: (selectedFile != null)
+          //               //     ? Image.file(selectedFile)
+          //               //     : Container(),
+          //               child: Container(),
+          //             );
+          //           }),
+          //     ),
+          //     Expanded(
+          //       child: Container(
+          //         decoration: BoxDecoration(
+          //           color: theme.colorScheme.surface,
+          //         ),
+          //       ),
+          //     ),
+          //   ],
+          // ),
           //the floating action button with custom position
           Positioned(
             right: 10,
