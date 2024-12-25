@@ -35,11 +35,14 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
   List<Widget> _trimSlider() {
     return [
       AnimatedBuilder(
+        //Use Listenable.merge to observe both widget.controller and widget.controller.vido
+        //concurrently
         animation: Listenable.merge([
           widget.controller,
           widget.controller.video,
         ]),
         builder: (context, child) {
+          //Extract the maximum duration of the video
           final int duration = widget.controller.videoDuration.inSeconds;
           final double pos = widget.controller.trimPosition * duration;
           log('Video Duration in second: $duration');
@@ -48,18 +51,27 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
             padding: EdgeInsets.symmetric(horizontal: height / 4),
             child: Row(
               children: [
+                //Showing the trim start duration, it's just a label that display
+                //the current start trim
                 Text(formatter(Duration(seconds: pos.toInt()))),
+                //Create an empty space that expand all spaces
                 const Expanded(child: SizedBox()),
+                //Observe the trimming action to decide when to show
+                //the start trim duration and end trim duration (such as 00:05 00:16)
                 AnimatedOpacity(
+                  //If the user is trimming the slider, so rebuild this widget
+                  //and set the opacity based on the trimming action
                   opacity: widget.controller.isTrimming ? 1 : 0,
                   duration: kThemeAnimationDuration,
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      //Showing the start trim duration
                       Text(formatter(widget.controller.startTrim)),
                       const SizedBox(
                         width: 10,
                       ),
+                      //showing the end trim duration
                       Text(formatter(widget.controller.endTrim)),
                     ],
                   ),
@@ -69,6 +81,7 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
           );
         },
       ),
+      //Showing the TimeLine for the video
       Container(
         width: MediaQuery.of(context).size.width,
         margin: EdgeInsets.symmetric(vertical: height / 4),
