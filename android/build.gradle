@@ -8,6 +8,18 @@ allprojects {
 rootProject.buildDir = "../build"
 subprojects {
     project.buildDir = "${rootProject.buildDir}/${project.name}"
+    afterEvaluate { project ->
+        if (project.name == 'ffmpeg_kit_flutter_min_gpl') {
+            project.android {
+                namespace = "com.arthenica.ffmpegkit.flutter" // Replace with the correct namespace
+            }
+        }
+        if (project.name == 'video_thumbnail') {
+            project.android {
+                namespace = "xyz.justsoft.video_thumbnail" // Replace with an appropriate namespace
+            }
+        }
+    }
 }
 subprojects {
     project.evaluationDependsOn(":app")

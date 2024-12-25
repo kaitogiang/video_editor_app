@@ -16,8 +16,7 @@ dependencies:
   flutter_svg: ^2.0.5
   google_fonts: ^6.2.1
   flex_color_picker: ^3.6.0
-  file_picker: ^8.1.6
-  video_editor: ^3.0.0
+  video_editor: ^2.4.0
 
   cupertino_icons: ^1.0.8
 
