@@ -1,6 +1,7 @@
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
+import 'package:video_editor/domain/entities/cover_data.dart';
 import 'package:video_editor/ui/video_viewer.dart';
 import 'package:video_editor/video_editor.dart';
 
@@ -53,7 +54,10 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
               children: [
                 //Showing the trim start duration, it's just a label that display
                 //the current start trim
-                Text(formatter(Duration(seconds: pos.toInt()))),
+                Text(
+                  formatter(Duration(seconds: pos.toInt())),
+                  style: const TextStyle(color: Colors.white),
+                ),
                 //Create an empty space that expand all spaces
                 const Expanded(child: SizedBox()),
                 //Observe the trimming action to decide when to show
@@ -67,12 +71,18 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       //Showing the start trim duration
-                      Text(formatter(widget.controller.startTrim)),
+                      Text(
+                        formatter(widget.controller.startTrim),
+                        style: const TextStyle(color: Colors.white),
+                      ),
                       const SizedBox(
                         width: 10,
                       ),
                       //showing the end trim duration
-                      Text(formatter(widget.controller.endTrim)),
+                      Text(
+                        formatter(widget.controller.endTrim),
+                        style: const TextStyle(color: Colors.white),
+                      ),
                     ],
                   ),
                 ),
@@ -92,9 +102,11 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
           child: TrimTimeline(
             controller: widget.controller,
             padding: const EdgeInsets.only(top: 10),
+            textStyle: const TextStyle(color: Colors.white),
           ),
         ),
-      )
+      ),
+      //Action button below
     ];
   }
 
@@ -203,9 +215,9 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
                       //TabBar and TimeLine
                       Container(
                         height: 300,
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                        ),
+                        // decoration: const BoxDecoration(
+                        //   color: Colors.white,
+                        // ),
                         margin: const EdgeInsets.only(top: 10),
                         child: Column(
                           children: [

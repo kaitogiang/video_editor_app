@@ -154,7 +154,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   svgIconPath: 'assets/icons/music_note_icon.svg',
                   onPressed: () {
                     log('Showing the dialog for adding audio');
-                    showLoadingStatus(context);
+                    // showLoadingStatus(context);
+                    //Upload audio to the app
+                    
+                    
                   },
                 ),
               ],
