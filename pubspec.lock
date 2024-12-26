@@ -97,14 +97,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.3"
-  ffmpeg_kit_flutter_min_gpl:
-    dependency: transitive
+  ffmpeg_kit_flutter:
+    dependency: "direct main"
     description:
-      name: ffmpeg_kit_flutter_min_gpl
-      sha256: ca3dc2330c176c8ef96fb512e7a1a37ab369e15685d2e72a52ec1d50726360a0
+      name: ffmpeg_kit_flutter
+      sha256: "843aae41823ca94a0988d975b4b6cdc6948744b9b7e2707d81a3a9cd237b0100"
       url: "https://pub.dev"
     source: hosted
-    version: "5.1.0"
+    version: "6.0.3"
   ffmpeg_kit_flutter_platform_interface:
     dependency: transitive
     description:
@@ -432,6 +432,54 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.3.0"
+  permission_handler:
+    dependency: "direct main"
+    description:
+      name: permission_handler
+      sha256: "18bf33f7fefbd812f37e72091a15575e72d5318854877e0e4035a24ac1113ecb"
+      url: "https://pub.dev"
+    source: hosted
+    version: "11.3.1"
+  permission_handler_android:
+    dependency: transitive
+    description:
+      name: permission_handler_android
+      sha256: "71bbecfee799e65aff7c744761a57e817e73b738fedf62ab7afd5593da21f9f1"
+      url: "https://pub.dev"
+    source: hosted
+    version: "12.0.13"
+  permission_handler_apple:
+    dependency: transitive
+    description:
+      name: permission_handler_apple
+      sha256: e6f6d73b12438ef13e648c4ae56bd106ec60d17e90a59c4545db6781229082a0
+      url: "https://pub.dev"
+    source: hosted
+    version: "9.4.5"
+  permission_handler_html:
+    dependency: transitive
+    description:
+      name: permission_handler_html
+      sha256: "38f000e83355abb3392140f6bc3030660cfaef189e1f87824facb76300b4ff24"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.1.3+5"
+  permission_handler_platform_interface:
+    dependency: transitive
+    description:
+      name: permission_handler_platform_interface
+      sha256: e9c8eadee926c4532d0305dff94b85bf961f16759c3af791486613152af4b4f9
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.2.3"
+  permission_handler_windows:
+    dependency: transitive
+    description:
+      name: permission_handler_windows
+      sha256: "1a790728016f79a41216d88672dbc5df30e686e811ad4e698bfc51f76ad91f1e"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.2.1"
   petitparser:
     dependency: transitive
     description:
@@ -561,12 +609,12 @@ packages:
     dependency: "direct main"
     description:
       name: video_editor
-      sha256: "180e1470e10d5f1b69de8996e282e024e36736c6ece36025ea040e8cdacd798f"
+      sha256: "263be52e052118389f372f055f59c2fda5c7beecfdb706b899d2e05be8740c22"
       url: "https://pub.dev"
     source: hosted
-    version: "2.4.0"
+    version: "3.0.0"
   video_player:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: video_player
       sha256: "4a8c3492d734f7c39c2588a3206707a05ee80cef52e8c7f3b2078d430c84bc17"
@@ -606,7 +654,7 @@ packages:
     source: hosted
     version: "2.3.3"
   video_thumbnail:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: video_thumbnail
       sha256: "3455c189d3f0bb4e3fc2236475aa84fe598b9b2d0e08f43b9761f5bc44210016"

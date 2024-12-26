@@ -1,25 +1,32 @@
 import 'dart:async';
 import 'dart:developer';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 
 import 'package:video_editor/video_editor.dart';
-import 'package:video_thumbnail/video_thumbnail.dart';
+import 'package:video_editor_app/video_editor/utils/shared_method.dart';
 
-class VideoEditorScreen extends StatefulWidget {
-  const VideoEditorScreen({super.key, required this.controller});
+class VideoEditorPreviewScreen extends StatefulWidget {
+  const VideoEditorPreviewScreen(
+      {super.key, required this.controller, required this.videos});
 
   final VideoEditorController controller;
+  final List<File> videos;
 
   @override
-  State<VideoEditorScreen> createState() => _VideoEditorScreenState();
+  State<VideoEditorPreviewScreen> createState() =>
+      _VideoEditorPreviewScreenState();
 }
 
-class _VideoEditorScreenState extends State<VideoEditorScreen> {
+class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
   final double height = 60;
   final StreamController<int> _timeLineController = StreamController<int>();
   final StreamController<double> _positionStreamController =
       StreamController<double>();
+  final List<String> imagePaths = [];
+
+  final ScrollController _editorScrollController = ScrollController();
 
   @override
   void initState() {
@@ -33,11 +40,51 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
       _timeLineController.add(position!.inSeconds);
       _updateCurrentPosition();
     });
+    _startExtractingFrames();
   }
 
   @override
   void dispose() {
     super.dispose();
+  }
+
+  void _startExtractingFrames() async {
+    log('Starting extract frames');
+    String videoPath = widget.videos[0].path;
+    await for (String imagePath in extractVideoFrameStream(videoPath)) {
+      setState(() {
+        imagePaths.add(imagePath);
+      });
+    }
+  }
+
+  Widget _buildVideoTimeLineWithFrames() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        physics: const NeverScrollableScrollPhysics(),
+        child: Row(
+          children: [
+            const SizedBox(
+              height: 50,
+              width: 180,
+            ),
+            ...imagePaths.map((path) {
+              return Container(
+                width: 100,
+                height: 50,
+                margin: const EdgeInsets.symmetric(horizontal: 2.0),
+                child: Image.file(
+                  File(path),
+                  fit: BoxFit.cover,
+                ),
+              );
+            }).toList()
+          ],
+        ),
+      ),
+    );
   }
 
   String formatter(Duration duration) => [
@@ -111,22 +158,6 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
           );
         });
   }
-
-  // Future<List<String>> _extractFrames(String videoPath) async {
-  //   List<String> thumbnails = [];
-  //   for (int i = 0; i < widget.controller.videoDuration.inSeconds; i++) {
-  //     final String? thumbnail = await VideoThumbnail.thumbnailFile(
-  //       video: videoPath,
-  //       timeMs: i * 1000,
-  //       quality: 75,
-  //     );
-  //     if (thumbnail != null) {
-  //       thumbnails.add(thumbnail);
-  //     }
-  //   }
-
-  //   return thumbnails;
-  // }
 
   Widget _buildVideoTimeLine() {
     return StreamBuilder<double>(
@@ -274,139 +305,123 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
             children: [
               //Showing the NavBar later here
               Expanded(
-                child: DefaultTabController(
-                  length: 2,
-                  child: Column(
-                    children: [
-                      Expanded(
-                        //Using TabBarView to show the two screen, the first one is the preview video screen and the rest is crop area
-                        //There will be a button to switch between the two sreen, for instance, a crop button.
-                        //When the user click on it, it will switch to the scrop screen and allow user to crop the video
-                        child: TabBarView(
-                          physics: const NeverScrollableScrollPhysics(),
-                          children: [
-                            //Display the video player with the play button overlapped
-                            Stack(
-                              alignment: Alignment.center,
-                              children: [
-                                //The widget that will be showed the crop area overlapped the video
-                                //The user can see the desired crop area.
-                                // CropGridViewer.preview(
-                                //   controller: widget.controller,
-                                // ),
-                                //The widget for showing the video preview for the user to see
-                                CropGridViewer.preview(
-                                    controller: widget.controller),
+                child: Column(
+                  children: [
+                    Expanded(
+                      //Using TabBarView to show the two screen, the first one is the preview video screen and the rest is crop area
+                      //There will be a button to switch between the two sreen, for instance, a crop button.
+                      //When the user click on it, it will switch to the scrop screen and allow user to crop the video
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          //The widget that will be showed the crop area overlapped the video
+                          //The user can see the desired crop area.
+                          // CropGridViewer.preview(
+                          //   controller: widget.controller,
+                          // ),
+                          //The widget for showing the video preview for the user to see
+                          CropGridViewer.preview(controller: widget.controller),
 
-                                //Building the player Icon that allows user click on it
-                                //By default, the icon is visile and the video is not play.
-                                //When the video is playing, the widget.controller.isPlayer return true,
-                                //so the icon will be transparent by setting the opacity to zero.
-                                //The value range of opacity from 0 to 1, 0 is fully transparent, 1 is fully visible
-                                AnimatedBuilder(
-                                  //The animation property of AnimatedBuilder is used to specify the Animation or AnimationController instance
-                                  //which will be observed by the AnimatedBuilder. If the animation value is changed
-                                  //The builder property of AnimatedBuilder will require a new build call and rebuild Widget
-                                  //In this context, we will observe the video property of VideoEditorController.
-                                  //Whenever the video is playing or stopping, it will trigger the rebuild
-                                  animation: widget.controller.video,
-                                  builder: (context, child) => AnimatedOpacity(
-                                    opacity:
-                                        widget.controller.isPlaying ? 0 : 1,
-                                    duration:
-                                        kThemeAnimationDuration, //kThemeAnimationDuration is a standard constant
-                                    child: GestureDetector(
-                                      onTap: widget.controller.video.play,
-                                      child: Container(
-                                        width: 100,
-                                        height: 40,
-                                        decoration: const BoxDecoration(
-                                          color: Colors.white,
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: const Icon(
-                                          Icons.play_arrow,
-                                          color: Colors.black,
-                                        ),
-                                      ),
-                                    ),
+                          //Building the player Icon that allows user click on it
+                          //By default, the icon is visile and the video is not play.
+                          //When the video is playing, the widget.controller.isPlayer return true,
+                          //so the icon will be transparent by setting the opacity to zero.
+                          //The value range of opacity from 0 to 1, 0 is fully transparent, 1 is fully visible
+                          AnimatedBuilder(
+                            //The animation property of AnimatedBuilder is used to specify the Animation or AnimationController instance
+                            //which will be observed by the AnimatedBuilder. If the animation value is changed
+                            //The builder property of AnimatedBuilder will require a new build call and rebuild Widget
+                            //In this context, we will observe the video property of VideoEditorController.
+                            //Whenever the video is playing or stopping, it will trigger the rebuild
+                            animation: widget.controller.video,
+                            builder: (context, child) => AnimatedOpacity(
+                              opacity: widget.controller.isPlaying ? 0 : 1,
+                              duration:
+                                  kThemeAnimationDuration, //kThemeAnimationDuration is a standard constant
+                              child: GestureDetector(
+                                onTap: widget.controller.video.play,
+                                child: Container(
+                                  width: 100,
+                                  height: 40,
+                                  decoration: const BoxDecoration(
+                                    color: Colors.white,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.play_arrow,
+                                    color: Colors.black,
                                   ),
                                 ),
-                              ],
-                            ),
-                            //Showing static image as the cover image and if the user scroll the
-                            //video frame, this image will be changed as well
-                            CoverViewer(controller: widget.controller)
-                          ],
-                        ),
-                      ),
-                      //Showing the below section
-                      //A container for containing all the widget below such as
-                      //TabBar and TimeLine
-                      Container(
-                        height: 300,
-                        // decoration: const BoxDecoration(
-                        //   color: Colors.white,
-                        // ),
-                        margin: const EdgeInsets.only(top: 10),
-                        child: Column(
-                          children: [
-                            //In this context, We will use one TabBar for controlling the two
-                            //TabBarView above. The first TabBarView for showing the above section,
-                            //The second TabBarView for showing the below section
-                            //When we click on a specific tab in TabBarView, the both TabBarView will select the
-                            //corresponding page index in the TabBarView.
-                            const TabBar(
-                              tabs: [
-                                //The first Button, the Trim button for trim the video
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Padding(
-                                      padding: EdgeInsets.all(5),
-                                      child: Icon(Icons.content_cut),
-                                    ),
-                                    Text('Trim'),
-                                  ],
-                                ),
-                                //The second button, the cover button for showing each frame in
-                                //the video.
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Padding(
-                                      padding: EdgeInsets.all(5),
-                                      child: Icon(Icons.video_label),
-                                    ),
-                                    Text('Cover')
-                                  ],
-                                ),
-                              ],
-                            ),
-                            Expanded(
-                              //Display the two below section, The first is timeline and the second is cover page
-                              child: TabBarView(
-                                physics: const NeverScrollableScrollPhysics(),
-                                children: [
-                                  //Showing the timeline that center the TrimSlider
-                                  Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      ..._trimSlider(),
-                                      // _buildTimeLine(),
-                                      _buildVideoTimeLine(),
-                                    ],
-                                  ),
-                                  //Showing the cover selection
-                                  _coverSelection()
-                                ],
                               ),
-                            )
-                          ],
-                        ),
-                      )
-                    ],
-                  ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    //Showing the below section
+                    //A container for containing all the widget below such as
+                    //TabBar and TimeLine
+                    Container(
+                      height: 300,
+                      // decoration: const BoxDecoration(
+                      //   color: Colors.white,
+                      // ),
+                      margin: const EdgeInsets.only(top: 10),
+                      child: Column(
+                        children: [
+                          //In this context, We will use one TabBar for controlling the two
+                          //TabBarView above. The first TabBarView for showing the above section,
+                          //The second TabBarView for showing the below section
+                          //When we click on a specific tab in TabBarView, the both TabBarView will select the
+                          //corresponding page index in the TabBarView.
+                          const Divider(),
+                          // Expanded(
+                          //   //Display the two below section, The first is timeline and the second is cover page
+                          //   child: Column(
+                          //     mainAxisAlignment: MainAxisAlignment.center,
+                          //     children: [
+                          //       ..._trimSlider(),
+                          //       // _buildTimeLine(),
+                          //       _buildVideoTimeLine(),
+                          //     ],
+                          //   ),
+                          // )
+                          // Expanded(
+                          //   child: SingleChildScrollView(
+                          //     child: Container(
+                          //       decoration: const BoxDecoration(
+                          //           // color: Colors.red,
+                          //           ),
+                          //       child: _buildVideoTimeLine(),
+                          //     ),
+                          //   ),
+                          // )
+                          Expanded(
+                            child: Stack(
+                              children: [
+                                //Showing the video timeline preview, autio timeline, Text timeline
+                                ListView(
+                                  scrollDirection: Axis.horizontal,
+                                  controller: _editorScrollController,
+                                  children: [
+                                    const SizedBox(
+                                      height: 10,
+                                    ),
+                                    _buildVideoTimeLineWithFrames(),
+                                  ],
+                                ),
+                                const Positioned.fill(
+                                  child: VerticalDivider(
+                                    thickness: 2,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        ],
+                      ),
+                    )
+                  ],
                 ),
               )
             ],

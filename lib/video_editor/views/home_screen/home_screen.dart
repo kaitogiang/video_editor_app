@@ -8,6 +8,7 @@ import 'package:video_editor/video_editor.dart';
 import 'package:video_editor_app/video_editor/utils/shared_method.dart';
 import 'package:video_editor_app/video_editor/views/home_screen/default_video_editor_screen.dart';
 import 'package:video_editor_app/video_editor/views/home_screen/video_editor_screen.dart';
+import 'package:video_editor_app/video_editor/views/preview_screen/video_editor_preview_screen.dart';
 import 'package:video_editor_app/video_editor/widgets/add_text_form.dart';
 import 'package:video_editor_app/video_editor/widgets/bottom_modal.dart';
 import 'package:video_editor_app/video_editor/widgets/loading_screen.dart';
@@ -97,7 +98,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     )
                   //When the file is selected
                   : _videoEditorController.initialized
-                      ? VideoEditorScreen(controller: _videoEditorController)
+                      ? VideoEditorPreviewScreen(
+                          controller: _videoEditorController,
+                          videos: [selectedFile],
+                        )
                       : const CircularProgressIndicator();
             },
           ),
@@ -116,6 +120,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     final file = await _buildOptionDialog(context) as File?;
                     log('file in ActionButton: ${file?.path}');
                     _selectedFile.value = file;
+
                     //if the selected file is not null, then initialize the video editor controller
                     if (file != null) {
                       // _initializeVideoEditorController(file);
@@ -135,9 +140,14 @@ class _HomeScreenState extends State<HomeScreen> {
                               }))
                           .catchError((error) {
                         log('Error initializing video editor: $error');
+
                         Navigator.pop(context);
                       }, test: (e) => e is VideoMinDurationError);
                       log('Video editor controller is initialized: ${_videoEditorController.initialized}');
+                      //--------Test------------
+                      //Extract video frame
+                      // await extractVideoFrame(file.path);
+                      //----------------------------
                     }
                   },
                 ),
@@ -156,8 +166,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     log('Showing the dialog for adding audio');
                     // showLoadingStatus(context);
                     //Upload audio to the app
-                    
-                    
                   },
                 ),
               ],
