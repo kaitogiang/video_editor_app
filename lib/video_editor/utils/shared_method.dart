@@ -65,7 +65,7 @@ Stream<String> extractVideoFrameStream(String videoPath) async* {
   });
   final videoDurationInSecond = await getVideoInformation(videoPath);
   log('Video duration in extractVideoFrameStream: ${videoDurationInSecond}');
-  for (int i = 1; i <= 17; i++) {
+  for (int i = 1; i <= videoDurationInSecond; i++) {
     // imagePath.add('$basePath image-000$i.png');
     String imagePath = '${basePath}image-${i.toString().padLeft(4, '0')}.png';
     yield imagePath;
@@ -77,31 +77,34 @@ Future<int> getVideoInformation(String videoPath) async {
     final information = session.getMediaInformation();
 
     if (information != null) {
-      log(information.getAllProperties()!['streams'].toString());
-      final streams =
-          information.getAllProperties()!['streams'] as List<dynamic>;
-      final durationMap = streams[0];
-      // final duration = durationMap['duration'];
-      log(durationMap['duration']);
-      final duration = durationMap;
+      // log(information.getAllProperties()!['streams'].toString());
+      // final streams =
+      //     information.getAllProperties()!['streams'] as List<dynamic>;
+      // final durationMap = jsonDecode(streams[0]);
+      // // final duration = durationMap['duration'];
+      // log(durationMap['duration']);
+      // final duration = durationMap;
 
       //Check the Following attributes on error,
       //Get other attribute
-      // final state =
-      //     FFmpegKitConfig.sessionStateToString(await session.getState());
-      // final returnCode = await session.getReturnCode();
-      // final failStackTrace = await session.getFailStackTrace();
-      // final output = await session.getOutput();
-      //Get the duration of the video, the duration has a second unit
-      //It will convert the video duration to second
-      // final outputMapString = await session.getOutput();
-      // final outputMap = jsonDecode(outputMapString!) as Map<String, dynamic>;
-      // final duration = outputMap['format']['duration'];
-      // log('State: $state');
-      // log('FailStackTrace: $failStackTrace');
-      // log('Output: $output');
+      final state =
+          FFmpegKitConfig.sessionStateToString(await session.getState());
+      final returnCode = await session.getReturnCode();
+      final failStackTrace = await session.getFailStackTrace();
+      final output = await session.getOutput();
+      // Get the duration of the video, the duration has a second unit
+      // It will convert the video duration to second
+      final outputMapString = await session.getOutput();
+      final outputMap = jsonDecode(outputMapString!) as Map<String, dynamic>;
+      final duration = outputMap['format']['duration'];
+      log('State: $state');
+      log('FailStackTrace: $failStackTrace');
+      log('Output: $output');
       log('Log 1 - getVideoDuration - information != null: Duration: ${duration}');
-      return duration;
+      //Decode map string into Map
+      // return duration['duration'] as int;
+      double doubleDuration = double.parse(duration.toString());
+      return doubleDuration.toInt();
     } else {
       log('Log 2 - getVideoDuration - information == null: Duration');
       return 0;
