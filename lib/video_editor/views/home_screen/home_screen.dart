@@ -9,6 +9,7 @@ import 'package:video_editor_app/video_editor/utils/shared_method.dart';
 import 'package:video_editor_app/video_editor/views/home_screen/default_video_editor_screen.dart';
 import 'package:video_editor_app/video_editor/views/home_screen/video_editor_screen.dart';
 import 'package:video_editor_app/video_editor/views/preview_screen/video_editor_preview_screen.dart';
+import 'package:video_editor_app/video_editor/widgets/action_button.dart';
 import 'package:video_editor_app/video_editor/widgets/add_text_form.dart';
 import 'package:video_editor_app/video_editor/widgets/bottom_modal.dart';
 import 'package:video_editor_app/video_editor/widgets/loading_screen.dart';
@@ -258,34 +259,5 @@ Future<void> _recordVideo() async {
   if (video != null) {
     //Do something here
     log('Recoreded video path : ${video.path}');
-  }
-}
-
-class ActionButton extends StatelessWidget {
-  const ActionButton({
-    super.key,
-    required this.svgIconPath,
-    required this.onPressed,
-  });
-
-  final String svgIconPath;
-  final void Function() onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return IconButton(
-      style: IconButton.styleFrom(
-          backgroundColor: theme.colorScheme.onPrimary,
-          foregroundColor: theme.colorScheme.surface,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(5),
-          ),
-          fixedSize: const Size.square(20)),
-      onPressed: onPressed,
-      icon: SvgPicture.asset(
-        svgIconPath,
-      ),
-    );
   }
 }
