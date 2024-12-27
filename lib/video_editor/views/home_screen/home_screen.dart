@@ -103,7 +103,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           controller: _videoEditorController,
                           videos: [selectedFile],
                         )
-                      : const CircularProgressIndicator();
+                      : const Center(child: CircularProgressIndicator());
             },
           ),
           //the floating action button with custom position

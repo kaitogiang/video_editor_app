@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:developer';
+import 'dart:io';
 
 // import 'package:ffmpeg_kit_flutter/ffmpeg_kit.dart';
 // import 'package:ffmpeg_kit_flutter/return_code.dart';
@@ -49,10 +50,14 @@ Future<List<String>> extractVideoFrame(String videoPath) async {
 Stream<String> extractVideoFrameStream(String videoPath) async* {
   log('Video path is: $videoPath');
   const String basePath = '/storage/emulated/0/Download/';
-  String video = videoPath;
-  List<String> imagePath = [];
+  //Get the lastModified date to distinguish between the files
+  File videoFile = File(videoPath);
+  final lastMotifiedDate = await videoFile.lastModified();
+  String lastModifiedDateString =
+      lastMotifiedDate.toIso8601String().replaceAll(':', '');
+  // String video = videoPath;
   String commandToExecute =
-      '-i $video -r 1 -f image2 ${basePath + 'image-%4d.png'}';
+      '-i $videoPath -r 1 -f image2 ${basePath + '$lastModifiedDateString-image-%4d.png'}';
   await FFmpegKit.execute(commandToExecute).then((session) async {
     final returnCode = await session.getReturnCode();
     if (ReturnCode.isSuccess(returnCode)) {
@@ -67,12 +72,15 @@ Stream<String> extractVideoFrameStream(String videoPath) async* {
   log('Video duration in extractVideoFrameStream: ${videoDurationInSecond}');
   for (int i = 1; i <= videoDurationInSecond; i++) {
     // imagePath.add('$basePath image-000$i.png');
-    String imagePath = '${basePath}image-${i.toString().padLeft(4, '0')}.png';
+    String imagePath =
+        '${basePath}${lastModifiedDateString}-image-${i.toString().padLeft(4, '0')}.png';
     yield imagePath;
   }
 }
 
 Future<int> getVideoInformation(String videoPath) async {
+  File videoFile = File(videoPath);
+  final lastMotifiedDate = videoFile.lastModified();
   return await FFprobeKit.getMediaInformation(videoPath).then((session) async {
     final information = session.getMediaInformation();
 
@@ -97,9 +105,9 @@ Future<int> getVideoInformation(String videoPath) async {
       final outputMapString = await session.getOutput();
       final outputMap = jsonDecode(outputMapString!) as Map<String, dynamic>;
       final duration = outputMap['format']['duration'];
-      log('State: $state');
-      log('FailStackTrace: $failStackTrace');
-      log('Output: $output');
+      // log('State: $state');
+      // log('FailStackTrace: $failStackTrace');
+      // log('Output: $output');
       log('Log 1 - getVideoDuration - information != null: Duration: ${duration}');
       //Decode map string into Map
       // return duration['duration'] as int;
