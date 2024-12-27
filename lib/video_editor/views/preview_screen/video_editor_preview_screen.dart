@@ -9,6 +9,7 @@ import 'package:video_editor_app/video_editor/utils/shared_method.dart';
 import 'package:video_editor_app/video_editor/widgets/action_button.dart';
 import 'package:video_editor_app/video_editor/utils/shared_method.dart';
 import 'package:video_editor_app/video_editor/widgets/video_frame.dart';
+import 'package:video_editor_app/video_editor/widgets/video_frame_marker.dart';
 
 class VideoEditorPreviewScreen extends StatefulWidget {
   const VideoEditorPreviewScreen({
@@ -36,6 +37,7 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
   late VideoEditorController videoEditorController;
   final ValueNotifier<List<File>> _filesNotifier = ValueNotifier([]);
   final ValueNotifier<int> _selectedFrameIndex = ValueNotifier(-1);
+
   @override
   void initState() {
     super.initState();
@@ -62,6 +64,12 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
     log('Video editor controller is initialized: ${videoEditorController.initialized}');
     log('Controller status: ${videoEditorController.initialized}');
     _timeLineController.add(0);
+    //Trying to fix the delay issue in the timeline by using this way later
+    // videoEditorController.video.position.asStream().listen((data) {
+    //   log('data: -- ${data.toString()}');
+    //   _updateCurrentScrollOffset(data!.inMilliseconds);
+    // });
+
     videoEditorController.video.addListener(() async {
       final position = await videoEditorController.video.position;
       log('Video position: ${position?.inSeconds}');
@@ -69,10 +77,11 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
       _timeLineController.add(position!.inSeconds);
       _updateCurrentPosition();
       if (videoEditorController.isPlaying) {
+        log('Position.inSeconds: ${position.inSeconds}');
+        // _updateCurrentScrollOffset(position.inMilliseconds);
         _updateCurrentScrollOffset(position.inSeconds);
       }
     });
-    // _startExtractingFrames(widget.videos[0].path);
 
     //Observe the _editScrollController
     _editorScrollController.addListener(() async {
@@ -82,22 +91,23 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
       if (videoEditorController.isPlaying) return;
       final newVideoPosition =
           (_editorScrollController.offset.toInt() * 1000 / 60).toInt();
-      await videoEditorController.video
+      videoEditorController.video
           .seekTo(Duration(milliseconds: newVideoPosition));
     });
   }
 
   @override
   void dispose() {
+    videoEditorController.dispose();
     super.dispose();
   }
 
   void _updateCurrentScrollOffset(int videoPositionInSecond) {
-    _editorScrollController.animateTo(
-      videoPositionInSecond * 60,
-      duration: const Duration(milliseconds: 1000),
-      curve: Curves.linear,
-    );
+    log('videoPositionInSecond: $videoPositionInSecond');
+    _editorScrollController.jumpTo(videoPositionInSecond * 60);
+    // _editorScrollController.jumpTo(
+    //   videoPositionInSecond / 60 * 1000,
+    // );
   }
 
   // void _startExtractingFrames(String videoPath) async {
@@ -114,65 +124,58 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
   //all of the images to render for the user. When choosing new file, use the
   //_startExtractingFrames method for extract a specific video frames
   Widget _buildVideoTimeLineWithFrames() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        physics: const NeverScrollableScrollPhysics(),
-        child: Row(
-          children: [
-            const SizedBox(
-              height: 50,
-              width: 180,
-            ),
-            // ...imagePaths.map((path) {
-            //   return Container(
-            //     width: 100,
-            //     height: 50,
-            //     margin: const EdgeInsets.symmetric(horizontal: 2.0),
-            //     child: Image.file(
-            //       File(path),
-            //       fit: BoxFit.cover,
-            //     ),
-            //   );
-            // }).toList()
-            //When the user adding the new file, rebuilt this section to show the new video timeline
-            ValueListenableBuilder(
-                valueListenable: _filesNotifier,
-                builder: (context, fileList, child) {
-                  return Row(
-                    children: List<Widget>.generate(fileList.length, (index) {
-                      return VideoFrame(file: fileList[index]);
-                    }),
-                  );
-                }),
-            Container(
-              decoration: const BoxDecoration(color: Color(0xFF0E0E0E)),
-              height: 50,
-              width: 240,
-              child: const Row(
-                children: [
-                  SizedBox(
-                    width: 30,
-                  ),
-                  Icon(
-                    Icons.fast_forward_outlined,
-                    color: Colors.white,
-                  ),
-                  SizedBox(
-                    width: 50,
-                  ),
-                  Icon(
-                    Icons.fast_forward_outlined,
-                    color: Colors.white,
-                  ),
-                  Spacer()
-                ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        //Timeline marker
+        const VideoFrameMarker(),
+        //Video frames
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 0),
+          child: Row(
+            children: [
+              const SizedBox(
+                height: 50,
+                width: 180,
               ),
-            ),
-          ],
+              //When the user adding the new file, rebuilt this section to show the new video timeline
+              ValueListenableBuilder(
+                  valueListenable: _filesNotifier,
+                  builder: (context, fileList, child) {
+                    return Row(
+                      children: List<Widget>.generate(fileList.length, (index) {
+                        return VideoFrame(file: fileList[index]);
+                      }),
+                    );
+                  }),
+              Container(
+                decoration: const BoxDecoration(color: Color(0xFF0E0E0E)),
+                height: 50,
+                width: 240,
+                child: const Row(
+                  children: [
+                    SizedBox(
+                      width: 30,
+                    ),
+                    Icon(
+                      Icons.fast_forward_outlined,
+                      color: Colors.white,
+                    ),
+                    SizedBox(
+                      width: 50,
+                    ),
+                    Icon(
+                      Icons.fast_forward_outlined,
+                      color: Colors.white,
+                    ),
+                    Spacer()
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
+      ],
     );
   }
 
@@ -189,201 +192,6 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
       _positionStreamController.sink.add(currentPosition);
     }
   }
-
-  //Showing the video duration
-  // Widget _buildTimeLineDuration(int second, int maxSecond) {
-  //   final duration = Duration(seconds: second);
-  //   final maxDuration = Duration(seconds: maxSecond);
-  //   final formattedDuration = duration.toString().split('.')[0];
-  //   final formattedMaxDuration = maxDuration.toString().split('.')[0];
-
-  //   return Stack(
-  //     children: [
-  //       //Background of the timeline
-  //       Container(
-  //         width: MediaQuery.of(context).size.width,
-  //         height: 50,
-  //         color: Colors.black12,
-  //       ),
-
-  //       // Text(
-  //       //   '$formattedDuration / $formattedMaxDuration',
-  //       //   style: const TextStyle(
-  //       //     color: Colors.white,
-  //       //   ),
-  //       // ),
-  //     ],
-  //   );
-  // }
-
-  //Build the video timeline that will automatically update the UI when the video
-  //is playing
-  // Widget _buildTimeLine() {
-  //   final maxSecond = videoEditorController.videoDuration.inSeconds;
-  //   return StreamBuilder<int>(
-  //       stream: _timeLineController.stream,
-  //       builder: (context, snapshot) {
-  //         if (snapshot.connectionState == ConnectionState.waiting) {
-  //           return const Text('Waiting');
-  //         } else if (!snapshot.hasData) {
-  //           return const Text('No data, wating');
-  //         }
-  //         final random = DateTime.now().second;
-  //         return Column(
-  //           children: [
-  //             Container(
-  //               width: MediaQuery.of(context).size.width,
-  //               height: height,
-  //               decoration: BoxDecoration(
-  //                 color: Colors.grey[300],
-  //               ),
-  //               margin: EdgeInsets.symmetric(horizontal: height / 4),
-  //               child: _buildTimeLineDuration(
-  //                 snapshot.data!,
-  //                 maxSecond,
-  //               ),
-  //             ),
-  //           ],
-  //         );
-  //       });
-  // }
-
-  // Widget _buildVideoTimeLine() {
-  //   return StreamBuilder<double>(
-  //     stream: _positionStreamController.stream,
-  //     builder: (context, snapshot) {
-  //       double currentPosition = snapshot.data ?? 0.0;
-  //       final duration = videoEditorController.videoDuration.inSeconds;
-  //       final double positionInseconds = currentPosition * duration * 15;
-  //       return Container(
-  //         width: MediaQuery.of(context).size.width,
-  //         height: 50,
-  //         color: Colors.green[300],
-  //         child: Stack(
-  //           children: [
-  //             Container(
-  //               width: MediaQuery.of(context).size.width,
-  //               height: 50,
-  //               color: Colors.black12,
-  //             ),
-  //             Positioned(
-  //               left: positionInseconds,
-  //               child: Container(
-  //                 width: 5,
-  //                 height: 50,
-  //                 color: Colors.red,
-  //               ),
-  //             )
-  //           ],
-  //         ),
-  //       );
-  //     },
-  //   );
-  // }
-
-  // List<Widget> _trimSlider() {
-  //   return [
-  //     AnimatedBuilder(
-  //       //Use Listenable.merge to observe both widget.controller and widget.controller.vido
-  //       //concurrently
-  //       animation: Listenable.merge([
-  //         videoEditorController,
-  //         videoEditorController.video,
-  //       ]),
-  //       builder: (context, child) {
-  //         //Extract the maximum duration of the video
-  //         final int duration = videoEditorController.videoDuration.inSeconds;
-  //         final double pos = videoEditorController.trimPosition * duration;
-  //         log('Video Duration in second: $duration');
-  //         log('Pos value: $pos');
-  //         return Padding(
-  //           padding: EdgeInsets.symmetric(horizontal: height / 4),
-  //           child: Row(
-  //             children: [
-  //               //Showing the trim start duration, it's just a label that display
-  //               //the current start trim
-  //               Text(
-  //                 formatter(Duration(seconds: pos.toInt())),
-  //                 style: const TextStyle(color: Colors.white),
-  //               ),
-  //               //Create an empty space that expand all spaces
-  //               const Expanded(child: SizedBox()),
-  //               //Observe the trimming action to decide when to show
-  //               //the start trim duration and end trim duration (such as 00:05 00:16)
-  //               AnimatedOpacity(
-  //                 //If the user is trimming the slider, so rebuild this widget
-  //                 //and set the opacity based on the trimming action
-  //                 opacity: videoEditorController.isTrimming ? 1 : 0,
-  //                 duration: kThemeAnimationDuration,
-  //                 child: Row(
-  //                   mainAxisSize: MainAxisSize.min,
-  //                   children: [
-  //                     //Showing the start trim duration
-  //                     Text(
-  //                       formatter(videoEditorController.startTrim),
-  //                       style: const TextStyle(color: Colors.white),
-  //                     ),
-  //                     const SizedBox(
-  //                       width: 10,
-  //                     ),
-  //                     //showing the end trim duration
-  //                     Text(
-  //                       formatter(videoEditorController.endTrim),
-  //                       style: const TextStyle(color: Colors.white),
-  //                     ),
-  //                   ],
-  //                 ),
-  //               ),
-  //             ],
-  //           ),
-  //         );
-  //       },
-  //     ),
-  //     //Showing the TimeLine for the video
-  //     Container(
-  //       width: MediaQuery.of(context).size.width,
-  //       margin: EdgeInsets.symmetric(vertical: height / 4),
-  //       child: TrimSlider(
-  //         controller: videoEditorController,
-  //         height: height,
-  //         horizontalMargin: height / 4,
-  //         child: TrimTimeline(
-  //           controller: videoEditorController,
-  //           padding: const EdgeInsets.only(top: 10),
-  //           textStyle: const TextStyle(color: Colors.white),
-  //         ),
-  //       ),
-  //     ),
-  //     //Action button below
-  //   ];
-  // }
-
-  // Widget _coverSelection() {
-  //   return SingleChildScrollView(
-  //     child: Center(
-  //       child: Container(
-  //         margin: const EdgeInsets.all(15),
-  //         child: CoverSelection(
-  //           controller: videoEditorController,
-  //           size: height + 10,
-  //           quantity: 8,
-  //           selectedCoverBuilder: (cover, size) {
-  //             return Stack(
-  //               alignment: Alignment.center,
-  //               children: [
-  //                 cover,
-  //                 Icon(
-  //                   Icons.check_circle,
-  //                   color: const CoverSelectionStyle().selectedBorderColor,
-  //                 )
-  //               ],
-  //             );
-  //           },
-  //         ),
-  //       ),
-  //     ),
-  //   );
-  // }
 
   @override
   Widget build(BuildContext context) {
@@ -490,16 +298,19 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
                             child: Stack(
                               children: [
                                 //Showing the video timeline preview, autio timeline, Text timeline
-                                ListView(
-                                  scrollDirection: Axis.horizontal,
-                                  controller: _editorScrollController,
-                                  physics: const BouncingScrollPhysics(),
-                                  children: [
-                                    const SizedBox(
-                                      height: 10,
-                                    ),
-                                    _buildVideoTimeLineWithFrames(),
-                                  ],
+                                FractionallySizedBox(
+                                  widthFactor: 0.9,
+                                  child: ListView(
+                                    scrollDirection: Axis.horizontal,
+                                    controller: _editorScrollController,
+                                    physics: const BouncingScrollPhysics(),
+                                    children: [
+                                      const SizedBox(
+                                        height: 10,
+                                      ),
+                                      _buildVideoTimeLineWithFrames(),
+                                    ],
+                                  ),
                                 ),
                                 const Positioned.fill(
                                   child: VerticalDivider(
