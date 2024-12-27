@@ -9,7 +9,7 @@ class LoadingScreen extends StatelessWidget {
       width: 100,
       height: 100,
       alignment: Alignment.center,
-      padding: const EdgeInsets.only(top: 400),
+      padding: const EdgeInsets.only(top: 10),
       child: Container(
         padding: const EdgeInsets.all(35),
         decoration: const BoxDecoration(

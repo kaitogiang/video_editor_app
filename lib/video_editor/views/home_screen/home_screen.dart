@@ -103,7 +103,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   //         controller: _videoEditorController,
                   //         videos: [selectedFile],
                   //       )
-                  : const Center(child: CircularProgressIndicator());
+                  : const Center(
+                      child: CircularProgressIndicator(
+                      color: Colors.white,
+                    ));
             },
           ),
           //the floating action button with custom position
@@ -152,9 +155,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
                       //Navigate to the video editor screen
                       Navigator.of(context, rootNavigator: true)
-                          .pushReplacement(
-                            MaterialPageRoute(builder: (context) => VideoEditorPreviewScreen(videos: [file]))
-                          );
+                          .pushReplacement(MaterialPageRoute(
+                              builder: (context) =>
+                                  VideoEditorPreviewScreen(videos: [file])));
                     }
                   },
                 ),

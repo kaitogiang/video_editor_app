@@ -34,6 +34,8 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
 
   final ScrollController _editorScrollController = ScrollController();
   late VideoEditorController videoEditorController;
+  final ValueNotifier<List<File>> _filesNotifier = ValueNotifier([]);
+  final ValueNotifier<int> _selectedFrameIndex = ValueNotifier(-1);
   @override
   void initState() {
     super.initState();
@@ -43,7 +45,7 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
     videoEditorController = VideoEditorController.file(
       file,
       minDuration: const Duration(seconds: 1),
-      maxDuration: const Duration(seconds: 30),
+      maxDuration: const Duration(seconds: 3600),
     );
     videoEditorController
         .initialize(aspectRatio: 9 / 16)
@@ -55,6 +57,8 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
 
       Navigator.pop(context);
     }, test: (e) => e is VideoMinDurationError);
+    //Adding the first file to the fileNotifer for observe the state of the fileNotifer list
+    _filesNotifier.value = [file];
     log('Video editor controller is initialized: ${videoEditorController.initialized}');
     log('Controller status: ${videoEditorController.initialized}');
     _timeLineController.add(0);
@@ -64,8 +68,22 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
       log('Current video duration: ${position?.abs()}');
       _timeLineController.add(position!.inSeconds);
       _updateCurrentPosition();
+      if (videoEditorController.isPlaying) {
+        _updateCurrentScrollOffset(position.inSeconds);
+      }
     });
-    _startExtractingFrames(widget.videos[0].path);
+    // _startExtractingFrames(widget.videos[0].path);
+
+    //Observe the _editScrollController
+    _editorScrollController.addListener(() async {
+      log('Current offset: ${_editorScrollController.offset}');
+      //If the user has scroll 60 offset, we will update the video position to next 1 second
+      //60 offset = 1 second = 1000 milisecond
+      final newVideoPosition =
+          (_editorScrollController.offset.toInt() * 1000 / 60).toInt();
+      await videoEditorController.video
+          .seekTo(Duration(milliseconds: newVideoPosition));
+    });
   }
 
   @override
@@ -73,15 +91,23 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
     super.dispose();
   }
 
-  void _startExtractingFrames(String videoPath) async {
-    log('Starting extract frames');
-    // String videoPath = widget.videos[0].path;
-    await for (String imagePath in extractVideoFrameStream(videoPath)) {
-      setState(() {
-        imagePaths.add(imagePath);
-      });
-    }
+  void _updateCurrentScrollOffset(int videoPositionInSecond) {
+    _editorScrollController.animateTo(
+      videoPositionInSecond * 60,
+      duration: const Duration(milliseconds: 1000),
+      curve: Curves.linear,
+    );
   }
+
+  // void _startExtractingFrames(String videoPath) async {
+  //   log('Starting extract frames');
+  //   // String videoPath = widget.videos[0].path;
+  //   await for (String imagePath in extractVideoFrameStream(videoPath)) {
+  //     setState(() {
+  //       imagePaths.add(imagePath);
+  //     });
+  //   }
+  // }
 
   //Building the timeline frames using the imagePath list. This list will contain
   //all of the images to render for the user. When choosing new file, use the
@@ -109,7 +135,40 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
             //     ),
             //   );
             // }).toList()
-            VideoFrame(file: widget.videos[0]),
+            //When the user adding the new file, rebuilt this section to show the new video timeline
+            ValueListenableBuilder(
+                valueListenable: _filesNotifier,
+                builder: (context, fileList, child) {
+                  return Row(
+                    children: List<Widget>.generate(fileList.length, (index) {
+                      return VideoFrame(file: fileList[index]);
+                    }),
+                  );
+                }),
+            Container(
+              decoration: const BoxDecoration(color: Color(0xFF0E0E0E)),
+              height: 50,
+              width: 240,
+              child: const Row(
+                children: [
+                  SizedBox(
+                    width: 30,
+                  ),
+                  Icon(
+                    Icons.fast_forward_outlined,
+                    color: Colors.white,
+                  ),
+                  SizedBox(
+                    width: 50,
+                  ),
+                  Icon(
+                    Icons.fast_forward_outlined,
+                    color: Colors.white,
+                  ),
+                  Spacer()
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -433,6 +492,7 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
                                 ListView(
                                   scrollDirection: Axis.horizontal,
                                   controller: _editorScrollController,
+                                  physics: const BouncingScrollPhysics(),
                                   children: [
                                     const SizedBox(
                                       height: 10,
@@ -466,6 +526,10 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
                                           if (file != null) {
                                             //Adding the video file to the list
                                             widget.videos.add(file);
+                                            _filesNotifier.value = [
+                                              ..._filesNotifier.value,
+                                              file
+                                            ];
                                             log('New video length list: ${widget.videos.length}');
                                             //Navigate to the video editor screen
                                           }
