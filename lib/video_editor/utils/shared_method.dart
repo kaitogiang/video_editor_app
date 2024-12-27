@@ -10,7 +10,6 @@ import 'package:ffmpeg_kit_flutter/ffprobe_kit.dart';
 import 'package:ffmpeg_kit_flutter/return_code.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:video_editor_app/video_editor/widgets/add_text_form.dart';
 import 'package:video_editor_app/video_editor/widgets/bottom_modal.dart';
 // import 'package:permission_handler/permission_handler.dart';
@@ -89,14 +88,6 @@ Future<int> getVideoInformation(String videoPath) async {
     final information = session.getMediaInformation();
 
     if (information != null) {
-      // log(information.getAllProperties()!['streams'].toString());
-      // final streams =
-      //     information.getAllProperties()!['streams'] as List<dynamic>;
-      // final durationMap = jsonDecode(streams[0]);
-      // // final duration = durationMap['duration'];
-      // log(durationMap['duration']);
-      // final duration = durationMap;
-
       //Check the Following attributes on error,
       //Get other attribute
       final state =
@@ -127,47 +118,46 @@ Future<int> getVideoInformation(String videoPath) async {
   });
 }
 
-
 //The method for options
 Future<dynamic> buildAddTextDialog(BuildContext context) {
-    return showBottomDialog(
-      context: context,
-      heightFactor: 0.85,
-      widthFactor: 1,
-      child: const AddTextForm(),
-    );
-  }
+  return showBottomDialog(
+    context: context,
+    heightFactor: 0.85,
+    widthFactor: 1,
+    child: const AddTextForm(),
+  );
+}
 
-  Future<dynamic> buildOptionDialog(BuildContext context) async {
-    return showBottomDialog(
-      context: context,
-      heightFactor: 0.71,
-      child: SelectOptions(
-        options: {
-          'Take photo': () async {
-            final file = await _takePhotoAction();
-            log('Selected file in buildOptionDialog: ${file?.path}');
-            Navigator.of(context, rootNavigator: true).pop(file);
-          },
-          'Choose image from gallery': _selectImageFromGallery,
-          'DreamWeaiver Gallery': () {
-            log('DreamWeaiver Gallery');
-          },
-          'Choose video from gallery': () async {
-            final videoFile = await _selectVideoFromGallery();
-            // final videoPlayerController = VideoPlayerController.file(videoFile!)
-            //   ..initialize();
-            // log('Video player controller in _buildOptionDialog: ${videoPlayerController.value.duration}');
-            Navigator.of(context, rootNavigator: true).pop(videoFile);
-          },
-          'Record video': _recordVideo,
-          'AI Images': () {
-            log('AI Images');
-          }
+Future<dynamic> buildOptionDialog(BuildContext context) async {
+  return showBottomDialog(
+    context: context,
+    heightFactor: 0.71,
+    child: SelectOptions(
+      options: {
+        'Take photo': () async {
+          final file = await _takePhotoAction();
+          log('Selected file in buildOptionDialog: ${file?.path}');
+          Navigator.of(context, rootNavigator: true).pop(file);
         },
-      ),
-    );
-  }
+        'Choose image from gallery': _selectImageFromGallery,
+        'DreamWeaiver Gallery': () {
+          log('DreamWeaiver Gallery');
+        },
+        'Choose video from gallery': () async {
+          final videoFile = await _selectVideoFromGallery();
+          // final videoPlayerController = VideoPlayerController.file(videoFile!)
+          //   ..initialize();
+          // log('Video player controller in _buildOptionDialog: ${videoPlayerController.value.duration}');
+          Navigator.of(context, rootNavigator: true).pop(videoFile);
+        },
+        'Record video': _recordVideo,
+        'AI Images': () {
+          log('AI Images');
+        }
+      },
+    ),
+  );
+}
 
 //Methods for handling the selected option
 Future<File?> _takePhotoAction() async {

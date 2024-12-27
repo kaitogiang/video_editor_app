@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:video_editor_app/video_editor/utils/shared_method.dart';
-import 'package:video_editor_app/video_editor/widgets/loading_screen.dart';
 
 class VideoFrame extends StatefulWidget {
   const VideoFrame({super.key, required this.file});
@@ -31,11 +30,7 @@ class _VideoFrameState extends State<VideoFrame> {
 
   void _startExtractingFrames(String videoPath) async {
     log('Starting extract frames');
-    // String videoPath = widget.videos[0].path;
     await for (String imagePath in extractVideoFrameStream(videoPath)) {
-      // setState(() {
-      //   _framesPath.add(imagePath);
-      // });
       _framesPath.add(imagePath);
     }
     setState(() {
@@ -80,7 +75,7 @@ class _VideoFrameState extends State<VideoFrame> {
                     // margin: const EdgeInsets.symmetric(horizontal: 2.0),
                     child: Image.file(
                       File(_framesPath[index]),
-                      fit: BoxFit.fitWidth,
+                      fit: BoxFit.fill,
                     ),
                   );
                 },
