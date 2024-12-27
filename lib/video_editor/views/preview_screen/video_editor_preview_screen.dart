@@ -79,6 +79,7 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
       log('Current offset: ${_editorScrollController.offset}');
       //If the user has scroll 60 offset, we will update the video position to next 1 second
       //60 offset = 1 second = 1000 milisecond
+      if (videoEditorController.isPlaying) return;
       final newVideoPosition =
           (_editorScrollController.offset.toInt() * 1000 / 60).toInt();
       await videoEditorController.video
