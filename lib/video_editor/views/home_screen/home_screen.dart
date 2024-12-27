@@ -98,12 +98,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: DefaultVideoEditorScreen(),
                     )
                   //When the file is selected
-                  : _videoEditorController.initialized
-                      ? VideoEditorPreviewScreen(
-                          controller: _videoEditorController,
-                          videos: [selectedFile],
-                        )
-                      : const Center(child: CircularProgressIndicator());
+                  // : _videoEditorController.initialized
+                  //     ? VideoEditorPreviewScreen(
+                  //         controller: _videoEditorController,
+                  //         videos: [selectedFile],
+                  //       )
+                  : const Center(child: CircularProgressIndicator());
             },
           ),
           //the floating action button with custom position
@@ -149,6 +149,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       //Extract video frame
                       // await extractVideoFrame(file.path);
                       //----------------------------
+
+                      //Navigate to the video editor screen
+                      Navigator.of(context, rootNavigator: true)
+                          .pushReplacement(
+                            MaterialPageRoute(builder: (context) => VideoEditorPreviewScreen(videos: [file]))
+                          );
                     }
                   },
                 ),
