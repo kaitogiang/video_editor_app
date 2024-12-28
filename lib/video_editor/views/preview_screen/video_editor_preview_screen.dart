@@ -34,9 +34,17 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
   final List<String> imagePaths = [];
 
   final ScrollController _editorScrollController = ScrollController();
-  late VideoEditorController videoEditorController;
+  late VideoEditorController videoEditorController = VideoEditorController.file(
+    widget.videos[0],
+    minDuration: const Duration(seconds: 1),
+    maxDuration: const Duration(seconds: 3600),
+  );
   final ValueNotifier<List<File>> _filesNotifier = ValueNotifier([]);
   final ValueNotifier<int> _selectedFrameIndex = ValueNotifier(-1);
+  late Stream<Duration?> videoPositionStream;
+
+  Timer? positionTimer;
+  bool isPressPlayVideo = true;
 
   @override
   void initState() {
@@ -44,17 +52,17 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
     //When the user choose the first video to edit, take this video and initialize the video editor controller
     final file = widget.videos[0];
     //Use the first video in the video list for the video editor controller
-    videoEditorController = VideoEditorController.file(
-      file,
-      minDuration: const Duration(seconds: 1),
-      maxDuration: const Duration(seconds: 3600),
-    );
-    videoEditorController
-        .initialize(aspectRatio: 9 / 16)
-        .then((_) => setState(() {
-              log('Calling setState when initializing video Controller');
-            }))
-        .catchError((error) {
+    // videoEditorController = VideoEditorController.file(
+    //   file,
+    //   minDuration: const Duration(seconds: 1),
+    //   maxDuration: const Duration(seconds: 3600),
+    // );
+    videoEditorController.initialize(aspectRatio: 9 / 16).then((_) {
+      setState(() {
+        log('Calling setState when initializing video Controller');
+      });
+      videoPositionStream = videoEditorController.video.position.asStream();
+    }).catchError((error) {
       log('Error initializing video editor: $error');
 
       Navigator.pop(context);
@@ -63,7 +71,6 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
     _filesNotifier.value = [file];
     log('Video editor controller is initialized: ${videoEditorController.initialized}');
     log('Controller status: ${videoEditorController.initialized}');
-    _timeLineController.add(0);
     //Trying to fix the delay issue in the timeline by using this way later
     // videoEditorController.video.position.asStream().listen((data) {
     //   log('data: -- ${data.toString()}');
@@ -71,15 +78,21 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
     // });
 
     videoEditorController.video.addListener(() async {
-      final position = await videoEditorController.video.position;
-      log('Video position: ${position?.inSeconds}');
-      log('Current video duration: ${position?.abs()}');
-      _timeLineController.add(position!.inSeconds);
-      _updateCurrentPosition();
+      // final position = await videoEditorController.video.position;
+
+      // _updateCurrentPosition();
+      // if (videoEditorController.isPlaying) {
+      //   log('Position.inSeconds: ${position!.inSeconds}');
+      //   // _updateCurrentScrollOffset(position.inMilliseconds);
+      //   // log('Position in Milisecond: ${position.inMilliseconds}');
+      //   _updateCurrentScrollOffset(position.inSeconds);
+      // }
+
+      //Observe every 100 milisecond
       if (videoEditorController.isPlaying) {
-        log('Position.inSeconds: ${position.inSeconds}');
-        // _updateCurrentScrollOffset(position.inMilliseconds);
-        _updateCurrentScrollOffset(position.inSeconds);
+        _startPositionTimer();
+      } else {
+        _stopPositionTimer();
       }
     });
 
@@ -102,6 +115,23 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
     super.dispose();
   }
 
+  void _startPositionTimer() {
+    _stopPositionTimer();
+    positionTimer =
+        Timer.periodic(const Duration(milliseconds: 100), (timer) async {
+      final position = await videoEditorController.video.position;
+      if (position != null) {
+        log('Current Position: ${position.inMilliseconds} ms');
+        _updateCurrentScrollOffsetByMilisecond(position.inMilliseconds);
+      }
+    });
+  }
+
+  void _stopPositionTimer() {
+    positionTimer?.cancel();
+    positionTimer = null;
+  }
+
   void _updateCurrentScrollOffset(int videoPositionInSecond) {
     log('videoPositionInSecond: $videoPositionInSecond');
     _editorScrollController.jumpTo(videoPositionInSecond * 60);
@@ -110,15 +140,15 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
     // );
   }
 
-  // void _startExtractingFrames(String videoPath) async {
-  //   log('Starting extract frames');
-  //   // String videoPath = widget.videos[0].path;
-  //   await for (String imagePath in extractVideoFrameStream(videoPath)) {
-  //     setState(() {
-  //       imagePaths.add(imagePath);
-  //     });
-  //   }
-  // }
+  void _updateCurrentScrollOffsetByMilisecond(int videoPositionInMilisecond) {
+    final offset = (videoPositionInMilisecond / 100) * 6;
+    // _editorScrollController.jumpTo(offset);
+    _editorScrollController.animateTo(
+      offset,
+      duration: const Duration(milliseconds: 100),
+      curve: Curves.easeInOut,
+    );
+  }
 
   //Building the timeline frames using the imagePath list. This list will contain
   //all of the images to render for the user. When choosing new file, use the
@@ -237,7 +267,15 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
                               duration:
                                   kThemeAnimationDuration, //kThemeAnimationDuration is a standard constant
                               child: GestureDetector(
-                                onTap: videoEditorController.video.play,
+                                onTap: () {
+                                  if (isPressPlayVideo) {
+                                    videoEditorController.video.play();
+                                    isPressPlayVideo = false;
+                                  } else {
+                                    videoEditorController.video.pause();
+                                    isPressPlayVideo = true;
+                                  }
+                                },
                                 child: Container(
                                   width: 100,
                                   height: 40,
