@@ -10,6 +10,7 @@ import 'package:ffmpeg_kit_flutter/ffprobe_kit.dart';
 import 'package:ffmpeg_kit_flutter/return_code.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:video_editor_app/video_editor/models/media.dart';
 import 'package:video_editor_app/video_editor/widgets/add_text_form.dart';
 import 'package:video_editor_app/video_editor/widgets/bottom_modal.dart';
 // import 'package:permission_handler/permission_handler.dart';
@@ -118,6 +119,32 @@ Future<int> getVideoInformation(String videoPath) async {
   });
 }
 
+Future<int> getVideoDurationInMilisecond(String videoPath) async {
+  return await FFprobeKit.getMediaInformation(videoPath).then((session) async {
+    final information = session.getMediaInformation();
+
+    if (information != null) {
+      // Get the duration of the video, the duration has a second unit
+      // It will convert the video duration to second
+      final outputMapString = await session.getOutput();
+      final outputMap = jsonDecode(outputMapString!) as Map<String, dynamic>;
+      final duration = outputMap['format']['duration'];
+      //Decode map string into Map
+      // return duration['duration'] as int;
+      double doubleDurationInSecond = double.parse(duration.toString());
+      final durationInMilisecond = (doubleDurationInSecond * 1000).round();
+      log('Video duration in milisecond: $durationInMilisecond');
+      return durationInMilisecond;
+    } else {
+      log('Log 2 - getVideoDuration - information == null: Duration');
+      return 0;
+    }
+  }).onError((error, e) {
+    log('Error in getVideoInformation: $error');
+    return 0;
+  });
+}
+
 //The method for options
 Future<dynamic> buildAddTextDialog(BuildContext context) {
   return showBottomDialog(
@@ -201,4 +228,31 @@ Future<void> _recordVideo() async {
     //Do something here
     log('Recoreded video path : ${video.path}');
   }
+}
+
+//The method for calculating the total offset based on the current video duration in milisecond
+double totalVideoOffset(int milisecond) {
+  return (milisecond * 60) / 1000;
+}
+
+//Method for calculating and assigning the totalOffset that the video will take up,
+//the startOffset and endOffset in the actual scrollView based on the previous media.
+void calculateStartAndEndOffsetForEachMedia(List<Media> medias) {
+  //the next video will be depended on the previous video to calculate the start and end
+  for (var i = 1; i < medias.length; i++) {
+    final previousMedia = medias[i - 1];
+    medias[i].totalOffset = totalVideoOffset(medias[i].durationInMilisecond);
+    medias[i].startOffset = previousMedia.endOffset;
+    medias[i].endOffset = previousMedia.endOffset + medias[i].totalOffset;
+  }
+}
+
+Media? getMediaContaingCurrentOffset(
+    double currentOffset, List<Media> mediaFiles) {
+  for (var media in mediaFiles) {
+    if (media.checkCurrentOffsetIsInMediaRange(currentOffset)) {
+      return media;
+    }
+  }
+  return null;
 }

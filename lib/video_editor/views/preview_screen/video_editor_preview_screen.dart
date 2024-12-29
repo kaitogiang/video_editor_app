@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 import 'package:video_editor/video_editor.dart';
+import 'package:video_editor_app/video_editor/models/media.dart';
 import 'package:video_editor_app/video_editor/utils/shared_method.dart';
 import 'package:video_editor_app/video_editor/widgets/action_button.dart';
 import 'package:video_editor_app/video_editor/utils/shared_method.dart';
@@ -44,11 +45,14 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
   //Observe the current video playing index
   int currentVideoIndex = 0;
   //Observe the current offset that the previous video has scrolled to
-  int currentScrollOffset = 0;
+  double currentScrollOffset = 0;
 
   Timer? positionTimer;
   bool isPressPlayVideo = true;
   bool hasReachedEnd = false;
+
+  //List of media for storing the media file;
+  List<Media> mediaFiles = [];
 
   @override
   void initState() {
@@ -61,12 +65,25 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
     //   minDuration: const Duration(seconds: 1),
     //   maxDuration: const Duration(seconds: 3600),
     // );
-    videoEditorController.value.initialize(aspectRatio: 9 / 16).then((_) {
+    videoEditorController.value.initialize().then((_) {
       setState(() {
         log('Calling setState when initializing video Controller');
       });
       videoEditorController.value.video.setLooping(false);
       videoEditorController.value.video.addListener(_videoEditorListener);
+
+      //Calculating the totalOffset, start and end offset for the first video
+      final maxDurationInMilisecond =
+          videoEditorController.value.videoDuration.inMilliseconds;
+      final totalOffset = totalVideoOffset(maxDurationInMilisecond);
+      final Media media = Media(
+        file: file,
+        durationInMilisecond: maxDurationInMilisecond,
+        totalOffset: totalOffset,
+        startOffset: 0,
+        endOffset: totalOffset,
+      );
+      mediaFiles.add(media);
     }).catchError((error) {
       log('Error initializing video editor: $error');
       Navigator.pop(context);
@@ -88,6 +105,7 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
     //   videoEditorController.video
     //       .seekTo(Duration(milliseconds: newVideoPosition));
     // });
+    _editorScrollController.addListener(_scrollListener);
   }
 
   //A listener for observing the current videoEditorController
@@ -105,14 +123,41 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
     }
   }
 
+  void _scrollListener() async {
+    final currentOffset = _editorScrollController.offset;
+    log('Current offset: ${_editorScrollController.offset}');
+    //If the user has scroll 60 offset, we will update the video position to next 1 second
+    //60 offset = 1 second = 1000 milisecond
+    if (videoEditorController.value.isPlaying) return;
+    //Check which the media contains the current offset in the list
+    //Observing the scroll position to recognize the current media
+    final currentMedia = getMediaContaingCurrentOffset(
+        _editorScrollController.offset, mediaFiles);
+    if (currentMedia != null) {
+      log('Has scrolled to the media: ${currentMedia.toString()}');
+      final newVideoPosition =
+          currentMedia.calculateCurrentPosition(currentOffset).toInt();
+      //Seeking to the video position based on the current video media
+      videoEditorController.value.video
+          .seekTo(Duration(milliseconds: newVideoPosition));
+    }
+    // final newVideoPosition =
+    //     (_editorScrollController.offset.toInt() * 1000 / 60).toInt();
+    // videoEditorController.value.video
+    //     .seekTo(Duration(milliseconds: newVideoPosition));
+  }
+
   void _playNextVideo() async {
     //Increase the currentVideoIndex that show the next video in the file list
     //Initializing the nextEditorController
     if (_nextVideoEditorController == null) {
-      currentVideoIndex++;
+      log('The last offset is $currentScrollOffset');
       //If the index is valid and the list contains the file at index, try to
       //initialize it
-      if (currentVideoIndex < _filesNotifier.value.length) {
+      if (currentVideoIndex + 1 < _filesNotifier.value.length) {
+        currentVideoIndex++;
+        //Assign the last offset that the video has scrolled to
+        currentScrollOffset = _editorScrollController.offset;
         final nextFile = _filesNotifier.value[currentVideoIndex];
         log('Next file path: ${_filesNotifier.value[currentVideoIndex].path}');
         _nextVideoEditorController = VideoEditorController.file(
@@ -120,11 +165,12 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
           minDuration: const Duration(seconds: 1),
           maxDuration: const Duration(seconds: 3600),
         );
-        _nextVideoEditorController!.initialize(aspectRatio: 9 / 16).then((_) {
+        _nextVideoEditorController!.initialize().then((_) {
           setState(() {
             videoEditorController.value.video
                 .removeListener(_videoEditorListener);
             videoEditorController.value = _nextVideoEditorController!;
+            videoEditorController.value.video.addListener(_videoEditorListener);
             videoEditorController.value.video.setLooping(false);
             videoEditorController.value.video.play();
             log('next video is playing');
@@ -172,7 +218,7 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
   }
 
   void _updateCurrentScrollOffsetByMilisecond(int videoPositionInMilisecond) {
-    final offset = (videoPositionInMilisecond / 100) * 6;
+    final offset = currentScrollOffset + (videoPositionInMilisecond / 100) * 6;
     _editorScrollController.jumpTo(offset);
     // _editorScrollController.animateTo(
     //   offset,
@@ -430,6 +476,21 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
                                               ..._filesNotifier.value,
                                               file
                                             ];
+                                            //Get the duration in milisecond of the video
+                                            final durationInMilisecond =
+                                                await getVideoDurationInMilisecond(
+                                                    file.path);
+                                            //Creating new media file for the new imported video
+                                            Media media = Media(
+                                              file: file,
+                                              durationInMilisecond:
+                                                  durationInMilisecond,
+                                            );
+                                            //Add it to the mediaList
+                                            mediaFiles.add(media);
+                                            //Reassign the totalOffset, start and end offset
+                                            calculateStartAndEndOffsetForEachMedia(
+                                                mediaFiles);
                                             log('New video length list: ${widget.videos.length}');
                                             //Navigate to the video editor screen
                                           }
@@ -450,6 +511,10 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
                                             'assets/icons/music_note_icon.svg',
                                         onPressed: () {
                                           log('Showing the dialog for adding audio');
+                                          if (mediaFiles.length > 1) {
+                                            log('The first video information is: ${mediaFiles[0].toString()}');
+                                            log('Next video information is: ${mediaFiles[1].toString()}');
+                                          }
                                           // showLoadingStatus(context);
                                           //Upload audio to the app
                                         },
