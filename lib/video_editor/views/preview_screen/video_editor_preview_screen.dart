@@ -118,7 +118,7 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
     }
     //Check wheather the video is reach the end or not
     if (videoEditorController.value.video.value.isCompleted) {
-      log('Reach the end....');
+      log('Reach the end....: ${videoEditorController.value.isPlaying}');
       _playNextVideo();
     }
   }
@@ -135,6 +135,10 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
         _editorScrollController.offset, mediaFiles);
     if (currentMedia != null) {
       log('Has scrolled to the media: ${currentMedia.toString()}');
+      final currentMediaIndex = mediaFiles.indexOf(currentMedia);
+      _switchVideoEditorController(currentMediaIndex);
+      //Update the current video index
+      // currentVideoIndex = currentMediaIndex;
       final newVideoPosition =
           currentMedia.calculateCurrentPosition(currentOffset).toInt();
       //Seeking to the video position based on the current video media
@@ -145,6 +149,42 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
     //     (_editorScrollController.offset.toInt() * 1000 / 60).toInt();
     // videoEditorController.value.video
     //     .seekTo(Duration(milliseconds: newVideoPosition));
+  }
+
+  //The method for switching the current video editor controller and display the
+  //specific video for the user based on the current video index.
+  //The current video index is calculated based on the scroll position. When the user has crolled
+  //to the area of the specific media, it will change the corresponding current video index.
+  //So we can use this index to intialize the current video editor controller, and then
+  //seeking to the video position.
+  void _switchVideoEditorController(int currentMediaIndex) {
+    //If the current media index is different from the current video index,
+    //we will inialize the corresponding video editor controller for the current media
+    //and then update the current video index similar to current media index.
+    if (currentVideoIndex != currentMediaIndex &&
+        _nextVideoEditorController == null) {
+      _nextVideoEditorController = VideoEditorController.file(
+        mediaFiles[currentMediaIndex].file,
+        minDuration: const Duration(seconds: 1),
+        maxDuration: const Duration(seconds: 3600),
+      );
+      _nextVideoEditorController!.initialize().then((_) {
+        setState(() {
+          videoEditorController.value.video
+              .removeListener(_videoEditorListener);
+          videoEditorController.value = _nextVideoEditorController!;
+          videoEditorController.value.video.addListener(_videoEditorListener);
+          videoEditorController.value.video.setLooping(false);
+          _nextVideoEditorController = null;
+          currentVideoIndex = currentMediaIndex;
+          log('The current video editor controller has inialized successfully in _switchVideoEditorController');
+        });
+      }).catchError((error) {
+        log('Erorr in _switchVideoEditorController: $error');
+      });
+    } else {
+      log('The currentVideoIndex and currentMediaIndex are the same, so dont need to create a controller');
+    }
   }
 
   void _playNextVideo() async {
@@ -173,6 +213,7 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
             videoEditorController.value.video.addListener(_videoEditorListener);
             videoEditorController.value.video.setLooping(false);
             videoEditorController.value.video.play();
+            _nextVideoEditorController = null;
             log('next video is playing');
           });
         }).catchError((error) {
@@ -515,6 +556,7 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
                                             log('The first video information is: ${mediaFiles[0].toString()}');
                                             log('Next video information is: ${mediaFiles[1].toString()}');
                                           }
+                                          log('Current video index: $currentVideoIndex');
                                           // showLoadingStatus(context);
                                           //Upload audio to the app
                                         },
