@@ -183,12 +183,17 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
       );
       _nextVideoEditorController!.initialize().then((_) {
         setState(() {
+          //Create an instance that holds the reference to the previous video editor controller
+          final previousVideoEditorController = videoEditorController.value;
           videoEditorController.value.video
               .removeListener(_videoEditorListener);
           videoEditorController.value = _nextVideoEditorController!;
           videoEditorController.value.video.addListener(_videoEditorListener);
           videoEditorController.value.video.setLooping(false);
-          _nextVideoEditorController = null;
+          //Release the memory of the previous controller after reassigning it
+          previousVideoEditorController.dispose();
+          _nextVideoEditorController =
+              null; //remove reference to the new controller
           currentVideoIndex = currentMediaIndex;
           log('The current video editor controller has inialized successfully in _switchVideoEditorController');
         });
@@ -264,16 +269,35 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
     positionTimer = null;
   }
 
-  void _updateCurrentScrollOffset(int videoPositionInSecond) {
-    log('videoPositionInSecond: $videoPositionInSecond');
-    _editorScrollController.jumpTo(videoPositionInSecond * 60);
-    // _editorScrollController.jumpTo(
-    //   videoPositionInSecond / 60 * 1000,
-    // );
-  }
+  // void _updateCurrentScrollOffset(int videoPositionInSecond) {
+  //   log('videoPositionInSecond: $videoPositionInSecond');
+  //   _editorScrollController.jumpTo(videoPositionInSecond * 60);
+  //   // _editorScrollController.jumpTo(
+  //   //   videoPositionInSecond / 60 * 1000,
+  //   // );
+  // }
 
   void _updateCurrentScrollOffsetByMilisecond(int videoPositionInMilisecond) {
-    final offset = currentScrollOffset + (videoPositionInMilisecond / 100) * 6;
+    // final offset = currentScrollOffset + (videoPositionInMilisecond / 100) * 6;
+    final curentMedia = mediaFiles[currentVideoIndex];
+    final currentStartOffset = curentMedia.startOffset;
+    /**
+     * Explain for this formula below. As normally, 1000 milisecond is equal to 60 offset.
+     * So each 100 milisecond will take 6 offset. Because I have created each Media instance for
+     * each video that import to the timeline. Each Media will contain file, totalOffset, startOffset, endOffset
+     * and durationInMilisecond. In the Media class, I have created the method for calculating the
+     * currentPosition in milisecond based on the currentOffset in scrollView. Because the startOffset
+     * of each media instance is different. If I want to know the current position in the video duration, 
+     * I need to simplify the value. For example, if the currentOffset is belong to a media range
+     * so I can know the startOffset and the endOffset of this media in the totalOffset of the entire the medias.
+     * If I have a media start at 360 offset and end at 600 offset, and I have scrolled to 
+     * 420 offset. At this time, we can imagine that 360 offset is 0 milisecond and 600 offset is 4000 ms
+     * if I add 60 to 360 offset, I have 420 offset and it is equal to 2000 ms. So I have the fomula
+     * likethis ((420 - startOffset) x 1000)) / 60 = milisecond. Based on this formula,
+     * I can get the specific offset by refactoring above formula.
+     *      */
+    final offset =
+        ((6 * videoPositionInMilisecond) + (100 * currentStartOffset)) / 100;
     _editorScrollController.jumpTo(offset);
     // _editorScrollController.animateTo(
     //   offset,
