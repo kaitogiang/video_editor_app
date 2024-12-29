@@ -28,23 +28,27 @@ class VideoEditorPreviewScreen extends StatefulWidget {
 
 class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
   final double height = 60;
-  final StreamController<int> _timeLineController = StreamController<int>();
   final StreamController<double> _positionStreamController =
       StreamController<double>();
   final List<String> imagePaths = [];
 
   final ScrollController _editorScrollController = ScrollController();
-  late VideoEditorController videoEditorController = VideoEditorController.file(
+  late ValueNotifier<VideoEditorController> videoEditorController =
+      ValueNotifier(VideoEditorController.file(
     widget.videos[0],
     minDuration: const Duration(seconds: 1),
     maxDuration: const Duration(seconds: 3600),
-  );
+  ));
+  VideoEditorController? _nextVideoEditorController;
   final ValueNotifier<List<File>> _filesNotifier = ValueNotifier([]);
-  final ValueNotifier<int> _selectedFrameIndex = ValueNotifier(-1);
-  late Stream<Duration?> videoPositionStream;
+  //Observe the current video playing index
+  int currentVideoIndex = 0;
+  //Observe the current offset that the previous video has scrolled to
+  int currentScrollOffset = 0;
 
   Timer? positionTimer;
   bool isPressPlayVideo = true;
+  bool hasReachedEnd = false;
 
   @override
   void initState() {
@@ -57,56 +61,82 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
     //   minDuration: const Duration(seconds: 1),
     //   maxDuration: const Duration(seconds: 3600),
     // );
-    videoEditorController.initialize(aspectRatio: 9 / 16).then((_) {
+    videoEditorController.value.initialize(aspectRatio: 9 / 16).then((_) {
       setState(() {
         log('Calling setState when initializing video Controller');
       });
-      videoPositionStream = videoEditorController.video.position.asStream();
+      videoEditorController.value.video.setLooping(false);
+      videoEditorController.value.video.addListener(_videoEditorListener);
     }).catchError((error) {
       log('Error initializing video editor: $error');
-
       Navigator.pop(context);
     }, test: (e) => e is VideoMinDurationError);
     //Adding the first file to the fileNotifer for observe the state of the fileNotifer list
     _filesNotifier.value = [file];
-    log('Video editor controller is initialized: ${videoEditorController.initialized}');
-    log('Controller status: ${videoEditorController.initialized}');
-    //Trying to fix the delay issue in the timeline by using this way later
-    // videoEditorController.video.position.asStream().listen((data) {
-    //   log('data: -- ${data.toString()}');
-    //   _updateCurrentScrollOffset(data!.inMilliseconds);
-    // });
-
-    videoEditorController.video.addListener(() async {
-      // final position = await videoEditorController.video.position;
-
-      // _updateCurrentPosition();
-      // if (videoEditorController.isPlaying) {
-      //   log('Position.inSeconds: ${position!.inSeconds}');
-      //   // _updateCurrentScrollOffset(position.inMilliseconds);
-      //   // log('Position in Milisecond: ${position.inMilliseconds}');
-      //   _updateCurrentScrollOffset(position.inSeconds);
-      // }
-
-      //Observe every 100 milisecond
-      if (videoEditorController.isPlaying) {
-        _startPositionTimer();
-      } else {
-        _stopPositionTimer();
-      }
-    });
+    log('Video editor controller is initialized: ${videoEditorController.value.initialized}');
+    log('Controller status: ${videoEditorController.value.initialized}');
 
     //Observe the _editScrollController
-    _editorScrollController.addListener(() async {
-      log('Current offset: ${_editorScrollController.offset}');
-      //If the user has scroll 60 offset, we will update the video position to next 1 second
-      //60 offset = 1 second = 1000 milisecond
-      if (videoEditorController.isPlaying) return;
-      final newVideoPosition =
-          (_editorScrollController.offset.toInt() * 1000 / 60).toInt();
-      videoEditorController.video
-          .seekTo(Duration(milliseconds: newVideoPosition));
-    });
+    // _editorScrollController.addListener(() async {
+    //   // log('Current offset: ${_editorScrollController.offset}');
+    //   //If the user has scroll 60 offset, we will update the video position to next 1 second
+    //   //60 offset = 1 second = 1000 milisecond
+    //   if (videoEditorController.isPlaying) return;
+
+    //   final newVideoPosition =
+    //       (_editorScrollController.offset.toInt() * 1000 / 60).toInt();
+    //   videoEditorController.video
+    //       .seekTo(Duration(milliseconds: newVideoPosition));
+    // });
+  }
+
+  //A listener for observing the current videoEditorController
+  void _videoEditorListener() async {
+    //Observe every 100 milisecond
+    if (videoEditorController.value.isPlaying) {
+      _startPositionTimer();
+    } else {
+      _stopPositionTimer();
+    }
+    //Check wheather the video is reach the end or not
+    if (videoEditorController.value.video.value.isCompleted) {
+      log('Reach the end....');
+      _playNextVideo();
+    }
+  }
+
+  void _playNextVideo() async {
+    //Increase the currentVideoIndex that show the next video in the file list
+    //Initializing the nextEditorController
+    if (_nextVideoEditorController == null) {
+      currentVideoIndex++;
+      //If the index is valid and the list contains the file at index, try to
+      //initialize it
+      if (currentVideoIndex < _filesNotifier.value.length) {
+        final nextFile = _filesNotifier.value[currentVideoIndex];
+        log('Next file path: ${_filesNotifier.value[currentVideoIndex].path}');
+        _nextVideoEditorController = VideoEditorController.file(
+          nextFile,
+          minDuration: const Duration(seconds: 1),
+          maxDuration: const Duration(seconds: 3600),
+        );
+        _nextVideoEditorController!.initialize(aspectRatio: 9 / 16).then((_) {
+          setState(() {
+            videoEditorController.value.video
+                .removeListener(_videoEditorListener);
+            videoEditorController.value = _nextVideoEditorController!;
+            videoEditorController.value.video.setLooping(false);
+            videoEditorController.value.video.play();
+            log('next video is playing');
+          });
+        }).catchError((error) {
+          log('Error in nextEditorController: $error');
+        });
+      }
+    } else {
+      //Print out the message indicate the controller has been initilized
+      log('The nextEditorController has been initialized');
+    }
   }
 
   @override
@@ -115,11 +145,12 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
     super.dispose();
   }
 
+  //Repeat the timer each 100 milisecond and get the current video position in milisecond
   void _startPositionTimer() {
     _stopPositionTimer();
     positionTimer =
         Timer.periodic(const Duration(milliseconds: 100), (timer) async {
-      final position = await videoEditorController.video.position;
+      final position = await videoEditorController.value.video.position;
       if (position != null) {
         log('Current Position: ${position.inMilliseconds} ms');
         _updateCurrentScrollOffsetByMilisecond(position.inMilliseconds);
@@ -142,12 +173,12 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
 
   void _updateCurrentScrollOffsetByMilisecond(int videoPositionInMilisecond) {
     final offset = (videoPositionInMilisecond / 100) * 6;
-    // _editorScrollController.jumpTo(offset);
-    _editorScrollController.animateTo(
-      offset,
-      duration: const Duration(milliseconds: 100),
-      curve: Curves.easeInOut,
-    );
+    _editorScrollController.jumpTo(offset);
+    // _editorScrollController.animateTo(
+    //   offset,
+    //   duration: const Duration(milliseconds: 100),
+    //   curve: Curves.easeInOut,
+    // );
   }
 
   //Building the timeline frames using the imagePath list. This list will contain
@@ -214,14 +245,14 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
         duration.inSeconds.remainder(60).toString().padLeft(2, '0')
       ].join(":");
 
-  void _updateCurrentPosition() {
-    if (videoEditorController.isPlaying) {
-      //Push the current posiion to the stream
-      double currentPosition = videoEditorController.videoPosition.inSeconds /
-          videoEditorController.videoDuration.inSeconds;
-      _positionStreamController.sink.add(currentPosition);
-    }
-  }
+  // void _updateCurrentPosition() {
+  //   if (videoEditorController.value.isPlaying) {
+  //     //Push the current posiion to the stream
+  //     double currentPosition = videoEditorController.videoPosition.inSeconds /
+  //         videoEditorController.videoDuration.inSeconds;
+  //     _positionStreamController.sink.add(currentPosition);
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -247,50 +278,69 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
                           //   controller: widget.controller,
                           // ),
                           //The widget for showing the video preview for the user to see
-                          CropGridViewer.preview(
-                              controller: videoEditorController),
+                          ValueListenableBuilder(
+                              valueListenable: videoEditorController,
+                              builder: (context, videController, child) {
+                                log('Triggered rebuild, videController initialization: ${videController.initialized}');
+                                //As my knowledge, the CropGridViewer will not updated its controller because
+                                //it has an internal state that prevent the update, so when I try to pass the new
+                                //video editor controller to this widget, it doen's reflect the changes in the UI
+                                //So I have found a solution, that is when the ValueListenableBuilder catch a rebuild event
+                                //I will create a new CropGridViwer.preview by passing the new key. If I remain the old key,
+                                //It will not create new and will use the old one. So I think this is a good solution
+                                //In summary, the solution is to create a new CropGridViewer.preview by passing the new key whenever
+                                //the video editor controller has changed.
+                                return CropGridViewer.preview(
+                                  key: ValueKey(videController),
+                                  controller: videController,
+                                );
+                              }),
 
                           //Building the player Icon that allows user click on it
                           //By default, the icon is visile and the video is not play.
                           //When the video is playing, the widget.controller.isPlayer return true,
                           //so the icon will be transparent by setting the opacity to zero.
                           //The value range of opacity from 0 to 1, 0 is fully transparent, 1 is fully visible
-                          AnimatedBuilder(
-                            //The animation property of AnimatedBuilder is used to specify the Animation or AnimationController instance
-                            //which will be observed by the AnimatedBuilder. If the animation value is changed
-                            //The builder property of AnimatedBuilder will require a new build call and rebuild Widget
-                            //In this context, we will observe the video property of VideoEditorController.
-                            //Whenever the video is playing or stopping, it will trigger the rebuild
-                            animation: videoEditorController.video,
-                            builder: (context, child) => AnimatedOpacity(
-                              opacity: videoEditorController.isPlaying ? 0 : 1,
-                              duration:
-                                  kThemeAnimationDuration, //kThemeAnimationDuration is a standard constant
-                              child: GestureDetector(
-                                onTap: () {
-                                  if (isPressPlayVideo) {
-                                    videoEditorController.video.play();
-                                    isPressPlayVideo = false;
-                                  } else {
-                                    videoEditorController.video.pause();
-                                    isPressPlayVideo = true;
-                                  }
-                                },
-                                child: Container(
-                                  width: 100,
-                                  height: 40,
-                                  decoration: const BoxDecoration(
-                                    color: Colors.white,
-                                    shape: BoxShape.circle,
+                          ValueListenableBuilder(
+                              valueListenable: videoEditorController,
+                              builder: (context, videoController, child) {
+                                return AnimatedBuilder(
+                                  //The animation property of AnimatedBuilder is used to specify the Animation or AnimationController instance
+                                  //which will be observed by the AnimatedBuilder. If the animation value is changed
+                                  //The builder property of AnimatedBuilder will require a new build call and rebuild Widget
+                                  //In this context, we will observe the video property of VideoEditorController.
+                                  //Whenever the video is playing or stopping, it will trigger the rebuild
+                                  animation: videoController.video,
+                                  builder: (context, child) => AnimatedOpacity(
+                                    opacity: videoController.isPlaying ? 0 : 1,
+                                    duration:
+                                        kThemeAnimationDuration, //kThemeAnimationDuration is a standard constant
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        if (isPressPlayVideo) {
+                                          videoController.video.play();
+                                          isPressPlayVideo = false;
+                                        } else {
+                                          videoController.video.pause();
+                                          isPressPlayVideo = true;
+                                        }
+                                      },
+                                      child: Container(
+                                        width: 100,
+                                        height: 40,
+                                        decoration: const BoxDecoration(
+                                          color: Colors.white,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: const Icon(
+                                          Icons.play_arrow,
+                                          color: Colors.black,
+                                        ),
+                                      ),
+                                    ),
                                   ),
-                                  child: const Icon(
-                                    Icons.play_arrow,
-                                    color: Colors.black,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
+                                );
+                              }),
                         ],
                       ),
                     ),
