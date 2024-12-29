@@ -125,6 +125,7 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
 
   void _scrollListener() async {
     final currentOffset = _editorScrollController.offset;
+    // currentScrollOffset = currentOffset;
     log('Current offset: ${_editorScrollController.offset}');
     //If the user has scroll 60 offset, we will update the video position to next 1 second
     //60 offset = 1 second = 1000 milisecond
@@ -137,8 +138,6 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
       log('Has scrolled to the media: ${currentMedia.toString()}');
       final currentMediaIndex = mediaFiles.indexOf(currentMedia);
       _switchVideoEditorController(currentMediaIndex);
-      //Update the current video index
-      // currentVideoIndex = currentMediaIndex;
       final newVideoPosition =
           currentMedia.calculateCurrentPosition(currentOffset).toInt();
       //Seeking to the video position based on the current video media
@@ -161,8 +160,22 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
     //If the current media index is different from the current video index,
     //we will inialize the corresponding video editor controller for the current media
     //and then update the current video index similar to current media index.
+    //In this checking, we need to check wheather the _nextEditorController is null or not
+    //If it is null, we will initialize it. Because the condition currentVideoIndex and currentMediaIndex
+    //are sastified many times and so it will leak the memory and make the app stop, by checking
+    //When listen to the scrollview, it will be called many times, so the currentVideoIndex != currentMediaIndex condition
+    //will be true many times and so the _nextEditorController will be initalized many times as well, and this
+    //is the reason why the app will stop immidiately. Because the initialize method is async, so
+    //it need a period of time to initiliaze and call setState is the final step. So at the first time
+    //the currentVideoIndex and currentMediaIndex and _nextEditorController are sastified, so
+    //the _nextVideoEditorController is assigned and not null. So if the listenr triggered this method
+    //again, the _nextVideoEditroController != null and so the if statement will not triggered, and
+    //we won't leak the memory at this time.
     if (currentVideoIndex != currentMediaIndex &&
         _nextVideoEditorController == null) {
+      // //update the last scroll offset for the previous video
+      // currentScrollOffset = mediaFiles[currentMediaIndex].endOffset;
+      //Assigning the VideoEditorController and intializing it
       _nextVideoEditorController = VideoEditorController.file(
         mediaFiles[currentMediaIndex].file,
         minDuration: const Duration(seconds: 1),
@@ -198,6 +211,7 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
         currentVideoIndex++;
         //Assign the last offset that the video has scrolled to
         currentScrollOffset = _editorScrollController.offset;
+        log('currentScrollOffset --->: $currentScrollOffset');
         final nextFile = _filesNotifier.value[currentVideoIndex];
         log('Next file path: ${_filesNotifier.value[currentVideoIndex].path}');
         _nextVideoEditorController = VideoEditorController.file(
