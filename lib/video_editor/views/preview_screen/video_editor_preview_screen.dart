@@ -121,7 +121,7 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
       _stopPositionTimer();
     }
 
-    //Demo-----------------------------------
+    //Initialize the nextEditorController to the next video when the first video is playing at 25% of the total duration
     final totalDuration = videoEditorController.value.videoDuration;
     final currentVideoPosition =
         await videoEditorController.value.video.position;
@@ -139,6 +139,8 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
       // _updateCurrentScrollOffsetByMilisecond(currentMedia.durationInMilisecond);
       _isPlayingVideo.value = false;
       // _playNextVideo();
+      //When the previous video has reach end, at this time, the nextVideoEditorController has been initialized fully.
+      //So we just assign the nextEditorController to the videoEditorController and call setState to the update the UI
       _playNextVideoController();
     }
   }
