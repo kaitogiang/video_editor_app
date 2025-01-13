@@ -42,6 +42,8 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
   ));
   VideoEditorController? _nextVideoEditorController;
   final ValueNotifier<List<File>> _filesNotifier = ValueNotifier([]);
+  //Observe the playing status of the video
+  final ValueNotifier<bool> _isPlayingVideo = ValueNotifier(false);
   //Observe the current video playing index
   int currentVideoIndex = 0;
   //Observe the current offset that the previous video has scrolled to
@@ -76,12 +78,14 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
       final maxDurationInMilisecond =
           videoEditorController.value.videoDuration.inMilliseconds;
       final totalOffset = totalVideoOffset(maxDurationInMilisecond);
+      final fileType = getMediaType(file.path);
       final Media media = Media(
         file: file,
         durationInMilisecond: maxDurationInMilisecond,
         totalOffset: totalOffset,
         startOffset: 0,
         endOffset: totalOffset,
+        fileType: fileType,
       );
       mediaFiles.add(media);
     }).catchError((error) {
@@ -119,6 +123,10 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
     //Check wheather the video is reach the end or not
     if (videoEditorController.value.video.value.isCompleted) {
       log('Reach the end....: ${videoEditorController.value.isPlaying}');
+      //When the video is reach end, jump to the last offset of the video
+      // final currentMedia = mediaFiles[currentVideoIndex];
+      // _updateCurrentScrollOffsetByMilisecond(currentMedia.durationInMilisecond);
+      _isPlayingVideo.value = false;
       _playNextVideo();
     }
   }
@@ -209,7 +217,10 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
     //Increase the currentVideoIndex that show the next video in the file list
     //Initializing the nextEditorController
     if (_nextVideoEditorController == null) {
-      log('The last offset is $currentScrollOffset');
+      //When the video is reach end, jump to the last offset of the video
+      // final currentMedia = mediaFiles[currentVideoIndex];
+      // _updateCurrentScrollOffsetByMilisecond(currentMedia.durationInMilisecond);
+      // log('The last offset is $currentScrollOffset');
       //If the index is valid and the list contains the file at index, try to
       //initialize it
       if (currentVideoIndex + 1 < _filesNotifier.value.length) {
@@ -226,6 +237,7 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
         );
         _nextVideoEditorController!.initialize().then((_) {
           setState(() {
+            _isPlayingVideo.value = true;
             videoEditorController.value.video
                 .removeListener(_videoEditorListener);
             videoEditorController.value = _nextVideoEditorController!;
@@ -235,8 +247,9 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
             _nextVideoEditorController = null;
             log('next video is playing');
           });
-        }).catchError((error) {
+        }).catchError((error, stacktrace) {
           log('Error in nextEditorController: $error');
+          log('Stacktrace in _playNextVideo method: $stacktrace');
         });
       }
     } else {
@@ -299,6 +312,7 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
     final offset =
         ((6 * videoPositionInMilisecond) + (100 * currentStartOffset)) / 100;
     _editorScrollController.jumpTo(offset);
+    log('Offset in _updateCurrentScrollOffsetByMilisecond: $offset');
     // _editorScrollController.animateTo(
     //   offset,
     //   duration: const Duration(milliseconds: 100),
@@ -426,46 +440,47 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
                           //When the video is playing, the widget.controller.isPlayer return true,
                           //so the icon will be transparent by setting the opacity to zero.
                           //The value range of opacity from 0 to 1, 0 is fully transparent, 1 is fully visible
-                          ValueListenableBuilder(
-                              valueListenable: videoEditorController,
-                              builder: (context, videoController, child) {
-                                return AnimatedBuilder(
-                                  //The animation property of AnimatedBuilder is used to specify the Animation or AnimationController instance
-                                  //which will be observed by the AnimatedBuilder. If the animation value is changed
-                                  //The builder property of AnimatedBuilder will require a new build call and rebuild Widget
-                                  //In this context, we will observe the video property of VideoEditorController.
-                                  //Whenever the video is playing or stopping, it will trigger the rebuild
-                                  animation: videoController.video,
-                                  builder: (context, child) => AnimatedOpacity(
-                                    opacity: videoController.isPlaying ? 0 : 1,
-                                    duration:
-                                        kThemeAnimationDuration, //kThemeAnimationDuration is a standard constant
-                                    child: GestureDetector(
-                                      onTap: () {
-                                        if (isPressPlayVideo) {
-                                          videoController.video.play();
-                                          isPressPlayVideo = false;
-                                        } else {
-                                          videoController.video.pause();
-                                          isPressPlayVideo = true;
-                                        }
-                                      },
-                                      child: Container(
-                                        width: 100,
-                                        height: 40,
-                                        decoration: const BoxDecoration(
-                                          color: Colors.white,
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: const Icon(
-                                          Icons.play_arrow,
-                                          color: Colors.black,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              }),
+
+                          // ValueListenableBuilder(
+                          //     valueListenable: videoEditorController,
+                          //     builder: (context, videoController, child) {
+                          //       return AnimatedBuilder(
+                          //         //The animation property of AnimatedBuilder is used to specify the Animation or AnimationController instance
+                          //         //which will be observed by the AnimatedBuilder. If the animation value is changed
+                          //         //The builder property of AnimatedBuilder will require a new build call and rebuild Widget
+                          //         //In this context, we will observe the video property of VideoEditorController.
+                          //         //Whenever the video is playing or stopping, it will trigger the rebuild
+                          //         animation: videoController.video,
+                          //         builder: (context, child) => AnimatedOpacity(
+                          //           opacity: videoController.isPlaying ? 0 : 1,
+                          //           duration:
+                          //               kThemeAnimationDuration, //kThemeAnimationDuration is a standard constant
+                          //           child: GestureDetector(
+                          //             onTap: () {
+                          //               if (isPressPlayVideo) {
+                          //                 videoController.video.play();
+                          //                 isPressPlayVideo = false;
+                          //               } else {
+                          //                 videoController.video.pause();
+                          //                 isPressPlayVideo = true;
+                          //               }
+                          //             },
+                          //             child: Container(
+                          //               width: 100,
+                          //               height: 40,
+                          //               decoration: const BoxDecoration(
+                          //                 color: Colors.white,
+                          //                 shape: BoxShape.circle,
+                          //               ),
+                          //               child: const Icon(
+                          //                 Icons.play_arrow,
+                          //                 color: Colors.black,
+                          //               ),
+                          //             ),
+                          //           ),
+                          //         ),
+                          //       );
+                          //     }),
                         ],
                       ),
                     ),
@@ -486,33 +501,40 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
                           //When we click on a specific tab in TabBarView, the both TabBarView will select the
                           //corresponding page index in the TabBarView.
                           const Divider(),
-                          // Expanded(
-                          //   //Display the two below section, The first is timeline and the second is cover page
-                          //   child: Column(
-                          //     mainAxisAlignment: MainAxisAlignment.center,
-                          //     children: [
-                          //       ..._trimSlider(),
-                          //       // _buildTimeLine(),
-                          //       _buildVideoTimeLine(),
-                          //     ],
-                          //   ),
-                          // )
-                          // Expanded(
-                          //   child: SingleChildScrollView(
-                          //     child: Container(
-                          //       decoration: const BoxDecoration(
-                          //           // color: Colors.red,
-                          //           ),
-                          //       child: _buildVideoTimeLine(),
-                          //     ),
-                          //   ),
-                          // )
+                          ValueListenableBuilder(
+                              valueListenable: _isPlayingVideo,
+                              builder: (context, isPlaying, child) {
+                                return Container(
+                                  alignment: Alignment.center,
+                                  child: IconButton(
+                                    onPressed: () {
+                                      //Pause or play the video
+                                      _isPlayingVideo.value =
+                                          !_isPlayingVideo.value;
+                                      //Allow the VideoPlayerController play the video
+                                      if (_isPlayingVideo.value) {
+                                        videoEditorController.value.video
+                                            .play();
+                                      } else {
+                                        videoEditorController.value.video
+                                            .pause();
+                                      }
+                                    },
+                                    icon: Icon(
+                                      isPlaying
+                                          ? Icons.pause
+                                          : Icons.play_arrow_outlined,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                );
+                              }),
                           Expanded(
                             child: Stack(
                               children: [
                                 //Showing the video timeline preview, autio timeline, Text timeline
                                 FractionallySizedBox(
-                                  widthFactor: 0.9,
+                                  widthFactor: 0.94,
                                   child: ListView(
                                     scrollDirection: Axis.horizontal,
                                     controller: _editorScrollController,
@@ -555,6 +577,11 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
                                               ..._filesNotifier.value,
                                               file
                                             ];
+                                            //Test check the file extension
+                                            final mediaType =
+                                                getMediaType(file.path);
+                                            log(mediaType.toString());
+
                                             //Get the duration in milisecond of the video
                                             final durationInMilisecond =
                                                 await getVideoDurationInMilisecond(
@@ -564,6 +591,7 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
                                               file: file,
                                               durationInMilisecond:
                                                   durationInMilisecond,
+                                              fileType: mediaType,
                                             );
                                             //Add it to the mediaList
                                             mediaFiles.add(media);

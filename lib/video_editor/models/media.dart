@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:video_editor_app/video_editor/utils/shared_method.dart';
+
 class Media {
   //The file represent the media, video or image
   File file;
@@ -12,13 +14,17 @@ class Media {
   double startOffset;
   //The end position offset in the actual scrollview
   double endOffset;
+  //Storing the file type
+  MediaType fileType;
 
   Media(
       {required this.file,
       this.totalOffset = 0.0,
       required this.durationInMilisecond,
       this.startOffset = 0,
-      this.endOffset = 0});
+      this.endOffset = 0,
+      this.fileType = MediaType.video
+      });
 
   //The method calculate the current video position in milisecond
   //The method will return the milisecond position of the video
