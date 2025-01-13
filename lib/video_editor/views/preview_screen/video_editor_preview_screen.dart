@@ -120,6 +120,17 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
     } else {
       _stopPositionTimer();
     }
+
+    //Demo-----------------------------------
+    final totalDuration = videoEditorController.value.videoDuration;
+    final currentVideoPosition =
+        await videoEditorController.value.video.position;
+    if (currentVideoPosition! >= totalDuration * 0.25) {
+      //Preload the next Editor controller
+      _initializeNextEditorController();
+    }
+    //---------------------------------------
+
     //Check wheather the video is reach the end or not
     if (videoEditorController.value.video.value.isCompleted) {
       log('Reach the end....: ${videoEditorController.value.isPlaying}');
@@ -127,7 +138,8 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
       // final currentMedia = mediaFiles[currentVideoIndex];
       // _updateCurrentScrollOffsetByMilisecond(currentMedia.durationInMilisecond);
       _isPlayingVideo.value = false;
-      _playNextVideo();
+      // _playNextVideo();
+      _playNextVideoController();
     }
   }
 
@@ -156,6 +168,38 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
     //     (_editorScrollController.offset.toInt() * 1000 / 60).toInt();
     // videoEditorController.value.video
     //     .seekTo(Duration(milliseconds: newVideoPosition));
+  }
+
+  void _initializeNextEditorController() {
+    //Initialize the next video controller before assigning it to the main video editor controller
+    if (currentVideoIndex + 1 < mediaFiles.length &&
+        _nextVideoEditorController == null) {
+      final nextVideoIndex = currentVideoIndex + 1;
+      _nextVideoEditorController = VideoEditorController.file(
+        mediaFiles[nextVideoIndex].file,
+        minDuration: const Duration(seconds: 1),
+        maxDuration: const Duration(seconds: 3600),
+      );
+      _nextVideoEditorController!.initialize().then((_) {
+        _nextVideoEditorController!.video.addListener(_videoEditorListener);
+        _nextVideoEditorController!.video.setLooping(false);
+      }).catchError((error) {
+        log('Error initializing next video controller: $error');
+      });
+    } else {
+      log('The nextEditorController has been initialized at the first time in _initializeNextEditorController');
+    }
+  }
+
+  void _playNextVideoController() {
+    //If the _nextVideoEditorController is not equal to null, we will assign the reference to the main video editor contorller
+    if (_nextVideoEditorController != null) {
+      currentVideoIndex++;
+      videoEditorController.value = _nextVideoEditorController!;
+      videoEditorController.value.video.play();
+      _nextVideoEditorController = null;
+      setState(() {});
+    }
   }
 
   //The method for switching the current video editor controller and display the
@@ -440,47 +484,6 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
                           //When the video is playing, the widget.controller.isPlayer return true,
                           //so the icon will be transparent by setting the opacity to zero.
                           //The value range of opacity from 0 to 1, 0 is fully transparent, 1 is fully visible
-
-                          // ValueListenableBuilder(
-                          //     valueListenable: videoEditorController,
-                          //     builder: (context, videoController, child) {
-                          //       return AnimatedBuilder(
-                          //         //The animation property of AnimatedBuilder is used to specify the Animation or AnimationController instance
-                          //         //which will be observed by the AnimatedBuilder. If the animation value is changed
-                          //         //The builder property of AnimatedBuilder will require a new build call and rebuild Widget
-                          //         //In this context, we will observe the video property of VideoEditorController.
-                          //         //Whenever the video is playing or stopping, it will trigger the rebuild
-                          //         animation: videoController.video,
-                          //         builder: (context, child) => AnimatedOpacity(
-                          //           opacity: videoController.isPlaying ? 0 : 1,
-                          //           duration:
-                          //               kThemeAnimationDuration, //kThemeAnimationDuration is a standard constant
-                          //           child: GestureDetector(
-                          //             onTap: () {
-                          //               if (isPressPlayVideo) {
-                          //                 videoController.video.play();
-                          //                 isPressPlayVideo = false;
-                          //               } else {
-                          //                 videoController.video.pause();
-                          //                 isPressPlayVideo = true;
-                          //               }
-                          //             },
-                          //             child: Container(
-                          //               width: 100,
-                          //               height: 40,
-                          //               decoration: const BoxDecoration(
-                          //                 color: Colors.white,
-                          //                 shape: BoxShape.circle,
-                          //               ),
-                          //               child: const Icon(
-                          //                 Icons.play_arrow,
-                          //                 color: Colors.black,
-                          //               ),
-                          //             ),
-                          //           ),
-                          //         ),
-                          //       );
-                          //     }),
                         ],
                       ),
                     ),
