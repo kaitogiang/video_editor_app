@@ -53,6 +53,9 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
   bool isPressPlayVideo = true;
   bool hasReachedEnd = false;
 
+  Timer? _scrollTimer;
+  final ValueNotifier<bool> _isScrolling = ValueNotifier(false);
+
   //List of media for storing the media file;
   List<Media> mediaFiles = [];
 
@@ -121,13 +124,21 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
       _stopPositionTimer();
     }
 
+    log('The video listener is listening the video even the video is pausing :))');
+    // if (!videoEditorController.value.isPlaying) {
+    //   log('Dont listen to the video editor controller because the video is not playing');
+    //   return;
+    // }
+
     //Initialize the nextEditorController to the next video when the first video is playing at 25% of the total duration
     final totalDuration = videoEditorController.value.videoDuration;
     final currentVideoPosition =
         await videoEditorController.value.video.position;
     if (currentVideoPosition! >= totalDuration * 0.25) {
-      //Preload the next Editor controller
-      _initializeNextEditorController();
+      if (videoEditorController.value.isPlaying) {
+        //Preload the next Editor controller
+        _initializeNextEditorController();
+      }
     }
     //---------------------------------------
 
@@ -146,6 +157,15 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
   }
 
   void _scrollListener() async {
+    //Cancelling the previous Timer to prevent multiple timer
+    _scrollTimer?.cancel();
+
+    //Set the _isCrolling = true if the previous scroll status is false
+    if (!_isScrolling.value) {
+      _isScrolling.value = true;
+      log('The user is scrolling the video editor');
+    }
+    //-------------------------------------------------------
     final currentOffset = _editorScrollController.offset;
     // currentScrollOffset = currentOffset;
     log('Current offset: ${_editorScrollController.offset}');
@@ -159,12 +179,39 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
     if (currentMedia != null) {
       log('Has scrolled to the media: ${currentMedia.toString()}');
       final currentMediaIndex = mediaFiles.indexOf(currentMedia);
-      _switchVideoEditorController(currentMediaIndex);
-      final newVideoPosition =
-          currentMedia.calculateCurrentPosition(currentOffset).toInt();
-      //Seeking to the video position based on the current video media
-      videoEditorController.value.video
-          .seekTo(Duration(milliseconds: newVideoPosition));
+
+      log('Current media index: $currentMediaIndex, current video index: $currentVideoIndex');
+
+      //Switching to next video editor controller after 1 second and prevent the dispose issues when the controller is not
+      //initilaized correctly because the user has scrolled very fast
+      //Check the current video index and current media index. The current video index will store the previous index which doesn't update immediately. And
+      //the current media index is the current index which is updated right away when the user has scrolled to the specific media.
+      //When the user has scrolled very fast from index 1 to index 0, the current video index and current media index is different, after the nextEditorController has
+      //assinged to the vidoEditorController, the current video index will reassign to the current media index.
+      //This way will prevent the intialization many times when the user has scrolled between the two media very fast. In below code,
+      //when the user has scrolled very fast between the two media and they continue to scroll and don't stop now. So the _scrollTimer will be cancled and the callback
+      //is not called. This action will prevent "The controller has disposed before updating the CoverData". This means the previous controller has been disposed and
+      //this controller is used, so it leads to the above error.
+      if (currentMediaIndex != currentVideoIndex) {
+        _scrollTimer = Timer(const Duration(milliseconds: 200), () {
+          _isScrolling.value = false;
+          log('The scrolling action has stopped');
+          _switchVideoEditorController(currentMediaIndex);
+          final newVideoPosition =
+              currentMedia.calculateCurrentPosition(currentOffset).toInt();
+          //Seeking to the video position based on the current video media
+          videoEditorController.value.video
+              .seekTo(Duration(milliseconds: newVideoPosition));
+        });
+      } else {
+        //When the current media index and current video index is the same, so we can use the video editor controller to seek to a specific duration in the video
+        // _switchVideoEditorController(currentMediaIndex);
+        final newVideoPosition =
+            currentMedia.calculateCurrentPosition(currentOffset).toInt();
+        //Seeking to the video position based on the current video media
+        videoEditorController.value.video
+            .seekTo(Duration(milliseconds: newVideoPosition));
+      }
     }
     // final newVideoPosition =
     //     (_editorScrollController.offset.toInt() * 1000 / 60).toInt();
@@ -191,6 +238,26 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
     } else {
       log('The nextEditorController has been initialized at the first time in _initializeNextEditorController');
     }
+  }
+
+  void _observeScrollStatus() {
+    //Cancelling the previous Timer to prevent multiple timer
+    _scrollTimer?.cancel();
+
+    //Set the _isCrolling = true if the previous scroll status is false
+    if (!_isScrolling.value) {
+      _isScrolling.value = true;
+      log('The user is scrolling the video editor');
+    }
+
+    log('Current media: $currentVideoIndex');
+
+    //Set the Timer to triggered method after 1 second,
+    //if the user don't sroll within 1 second, the _scrolling status will be false
+    _scrollTimer = Timer(const Duration(seconds: 1), () {
+      _isScrolling.value = false;
+      log('The scrolling action has stopped');
+    });
   }
 
   void _playNextVideoController() {
