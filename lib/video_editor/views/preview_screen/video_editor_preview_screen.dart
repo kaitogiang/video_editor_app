@@ -136,6 +136,7 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
         await videoEditorController.value.video.position;
     if (currentVideoPosition! >= totalDuration * 0.25) {
       if (videoEditorController.value.isPlaying) {
+        log('Initialize the nextEditorController in videoEditorListener');
         //Preload the next Editor controller
         _initializeNextEditorController();
       }
@@ -192,26 +193,51 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
       //when the user has scrolled very fast between the two media and they continue to scroll and don't stop now. So the _scrollTimer will be cancled and the callback
       //is not called. This action will prevent "The controller has disposed before updating the CoverData". This means the previous controller has been disposed and
       //this controller is used, so it leads to the above error.
-      if (currentMediaIndex != currentVideoIndex) {
-        _scrollTimer = Timer(const Duration(milliseconds: 200), () {
-          _isScrolling.value = false;
-          log('The scrolling action has stopped');
-          _switchVideoEditorController(currentMediaIndex);
-          final newVideoPosition =
-              currentMedia.calculateCurrentPosition(currentOffset).toInt();
-          //Seeking to the video position based on the current video media
-          videoEditorController.value.video
-              .seekTo(Duration(milliseconds: newVideoPosition));
-        });
-      } else {
-        //When the current media index and current video index is the same, so we can use the video editor controller to seek to a specific duration in the video
-        // _switchVideoEditorController(currentMediaIndex);
+
+      //If the user has scrolled outside the media file, do nothing
+      if (currentOffset > mediaFiles.last.endOffset) {
+        return;
+      }
+
+      if (currentMediaIndex == currentVideoIndex) {
+        final newVideoPosition =
+            currentMedia.calculateCurrentPosition(currentOffset).toInt();
+        //Seeking to the video position based on the current media
+        videoEditorController.value.video
+            .seekTo(Duration(milliseconds: newVideoPosition));
+        return;
+      }
+      _scrollTimer = Timer(const Duration(milliseconds: 500), () {
+        _isScrolling.value = false;
+        log('The scrolling action has stopped');
+        _switchVideoEditorController(currentMediaIndex);
         final newVideoPosition =
             currentMedia.calculateCurrentPosition(currentOffset).toInt();
         //Seeking to the video position based on the current video media
         videoEditorController.value.video
             .seekTo(Duration(milliseconds: newVideoPosition));
-      }
+      });
+
+      // if (currentMediaIndex != currentVideoIndex) {
+      //   _scrollTimer = Timer(const Duration(milliseconds: 200), () {
+      //     _isScrolling.value = false;
+      //     log('The scrolling action has stopped');
+      //     _switchVideoEditorController(currentMediaIndex);
+      //     final newVideoPosition =
+      //         currentMedia.calculateCurrentPosition(currentOffset).toInt();
+      //     //Seeking to the video position based on the current video media
+      //     videoEditorController.value.video
+      //         .seekTo(Duration(milliseconds: newVideoPosition));
+      //   });
+      // } else {
+      //   //When the current media index and current video index is the same, so we can use the video editor controller to seek to a specific duration in the video
+      //   // _switchVideoEditorController(currentMediaIndex);
+      //   final newVideoPosition =
+      //       currentMedia.calculateCurrentPosition(currentOffset).toInt();
+      //   //Seeking to the video position based on the current video media
+      //   videoEditorController.value.video
+      //       .seekTo(Duration(milliseconds: newVideoPosition));
+      // }
     }
     // final newVideoPosition =
     //     (_editorScrollController.offset.toInt() * 1000 / 60).toInt();
@@ -223,6 +249,7 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
     //Initialize the next video controller before assigning it to the main video editor controller
     if (currentVideoIndex + 1 < mediaFiles.length &&
         _nextVideoEditorController == null) {
+      log('Calling the _initializeNextEditorController to intialized the next editor controller,..........');
       final nextVideoIndex = currentVideoIndex + 1;
       _nextVideoEditorController = VideoEditorController.file(
         mediaFiles[nextVideoIndex].file,
@@ -254,7 +281,7 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
 
     //Set the Timer to triggered method after 1 second,
     //if the user don't sroll within 1 second, the _scrolling status will be false
-    _scrollTimer = Timer(const Duration(seconds: 1), () {
+    _scrollTimer = Timer(const Duration(milliseconds: 500), () {
       _isScrolling.value = false;
       log('The scrolling action has stopped');
     });
@@ -311,6 +338,27 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
           videoEditorController.value = _nextVideoEditorController!;
           videoEditorController.value.video.addListener(_videoEditorListener);
           videoEditorController.value.video.setLooping(false);
+          //Set the video position after the video is initialized, when the user has scrolled to the second video at the first time
+          /*
+          When a user adds two videos to the application, the timeline creates two media instances for each video. 
+          If the user is viewing the first video and scrolls to the area of the second video in a single scroll action, 
+          after stopping the scroll, the thumbnail of the video will jump to a position calculated based on the current media's scroll position.
+          However, once the user scrolls to a specific position and 
+          the video thumbnail above also seeks to the duration corresponding to the current offset,
+           the video always starts from duration zero of the current media, 
+           even though the user has scrolled to a position in the video that is not at the 0-second mark. 
+           On the other hand, if the user scrolls past the second video for the first time without pressing play, 
+           and then scrolls a bit further, the video starts from the current duration of the video.
+          This issue is related to the controller transition. When the user has just scrolled past the second video, 
+          the controller is in the process of being initialized, and the position is set before the controller is fully initialized. 
+          This results in the video jumping back to the 0-second mark when play is pressed.
+          
+          */
+          final newVideoPosition = mediaFiles[currentMediaIndex]
+              .calculateCurrentPosition(_editorScrollController.offset)
+              .toInt();
+          videoEditorController.value.video
+              .seekTo(Duration(milliseconds: newVideoPosition));
           //Release the memory of the previous controller after reassigning it
           previousVideoEditorController.dispose();
           _nextVideoEditorController =
