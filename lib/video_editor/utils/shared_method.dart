@@ -201,7 +201,10 @@ Future<dynamic> buildOptionDialog(BuildContext context) async {
           log('Selected file in buildOptionDialog: ${file?.path}');
           Navigator.of(context, rootNavigator: true).pop(file);
         },
-        'Choose image from gallery': _selectImageFromGallery,
+        'Choose image from gallery': () async {
+          final imageFile = await _selectImageFromGallery();
+          Navigator.of(context, rootNavigator: true).pop(imageFile);
+        },
         'DreamWeaiver Gallery': () {
           log('DreamWeaiver Gallery');
         },
@@ -234,7 +237,7 @@ Future<File?> _takePhotoAction() async {
   return null;
 }
 
-Future<void> _selectImageFromGallery() async {
+Future<File?> _selectImageFromGallery() async {
   log('Select image from gallery');
   final picker = ImagePicker();
   final image = await picker.pickImage(source: ImageSource.gallery);
@@ -242,7 +245,9 @@ Future<void> _selectImageFromGallery() async {
     //Do something here
     log('Image path in the gallery: ${image.path}');
     final imageFile = File(image.path);
+    return imageFile;
   }
+  return null;
 }
 
 Future<File?> _selectVideoFromGallery() async {

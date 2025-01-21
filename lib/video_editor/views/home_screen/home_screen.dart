@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_editor/video_editor.dart';
+import 'package:video_editor_app/video_editor/models/media.dart';
 import 'package:video_editor_app/video_editor/utils/shared_method.dart';
 import 'package:video_editor_app/video_editor/views/home_screen/default_video_editor_screen.dart';
 import 'package:video_editor_app/video_editor/views/home_screen/video_editor_screen.dart';
@@ -92,11 +93,23 @@ class _HomeScreenState extends State<HomeScreen> {
                     _selectedFile.value = file;
                     //if the selected file is not null, then initialize the video editor controller
                     if (file != null) {
+                      //Creating a media object to hold the media file
+                      final mediaType = getMediaType(file.path);
+                      log(mediaType.toString());
+                      //Get the duration in milisecond of the video
+                      final durationInMilisecond =
+                          await getVideoDurationInMilisecond(file.path);
+                      //Creating new media file for the new imported video
+                      Media media = Media(
+                        file: file,
+                        durationInMilisecond: durationInMilisecond,
+                        fileType: mediaType,
+                      );
                       //Navigate to the video editor screen
                       Navigator.of(context, rootNavigator: true)
                           .pushReplacement(MaterialPageRoute(
                               builder: (context) =>
-                                  VideoEditorPreviewScreen(videos: [file])));
+                                  VideoEditorPreviewScreen(videos: [media])));
                     }
                   },
                 ),
