@@ -30,8 +30,6 @@ class VideoEditorPreviewScreen extends StatefulWidget {
 
 class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
   final double height = 60;
-  final StreamController<double> _positionStreamController =
-      StreamController<double>();
   final List<String> imagePaths = [];
 
   final ScrollController _editorScrollController = ScrollController();
@@ -42,7 +40,7 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
     maxDuration: const Duration(seconds: 3600),
   ));
   VideoEditorController? _nextVideoEditorController;
-  final ValueNotifier<List<Media>> _filesNotifier = ValueNotifier([]);
+  // final ValueNotifier<List<Media>> _filesNotifier = ValueNotifier([]);
   //Observe the playing status of the video
   final ValueNotifier<bool> _isPlayingVideo = ValueNotifier(false);
   //Observe the current video playing index
@@ -58,7 +56,7 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
   final ValueNotifier<bool> _isScrolling = ValueNotifier(false);
 
   //List of media for storing the media file;
-  List<Media> mediaFiles = [];
+  ValueNotifier<List<Media>> mediaFiles = ValueNotifier([]);
 
   @override
   void initState() {
@@ -91,13 +89,13 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
         endOffset: totalOffset,
         fileType: fileType,
       );
-      mediaFiles.add(media);
+      mediaFiles.value = [media];
     }).catchError((error) {
       log('Error initializing video editor: $error');
       Navigator.pop(context);
     }, test: (e) => e is VideoMinDurationError);
     //Adding the first file to the fileNotifer for observe the state of the fileNotifer list
-    _filesNotifier.value = [file];
+    // _filesNotifier.value = [file];
     log('Video editor controller is initialized: ${videoEditorController.value.initialized}');
     log('Controller status: ${videoEditorController.value.initialized}');
 
@@ -177,10 +175,10 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
     //Check which the media contains the current offset in the list
     //Observing the scroll position to recognize the current media
     final currentMedia = getMediaContaingCurrentOffset(
-        _editorScrollController.offset, mediaFiles);
+        _editorScrollController.offset, mediaFiles.value);
     if (currentMedia != null) {
       log('Has scrolled to the media: ${currentMedia.toString()}');
-      final currentMediaIndex = mediaFiles.indexOf(currentMedia);
+      final currentMediaIndex = mediaFiles.value.indexOf(currentMedia);
 
       log('Current media index: $currentMediaIndex, current video index: $currentVideoIndex');
 
@@ -196,7 +194,7 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
       //this controller is used, so it leads to the above error.
 
       //If the user has scrolled outside the media file, do nothing
-      if (currentOffset > mediaFiles.last.endOffset) {
+      if (currentOffset > mediaFiles.value.last.endOffset) {
         return;
       }
 
@@ -248,12 +246,12 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
 
   void _initializeNextEditorController() {
     //Initialize the next video controller before assigning it to the main video editor controller
-    if (currentVideoIndex + 1 < mediaFiles.length &&
+    if (currentVideoIndex + 1 < mediaFiles.value.length &&
         _nextVideoEditorController == null) {
       log('Calling the _initializeNextEditorController to intialized the next editor controller,..........');
       final nextVideoIndex = currentVideoIndex + 1;
       _nextVideoEditorController = VideoEditorController.file(
-        mediaFiles[nextVideoIndex].file,
+        mediaFiles.value[nextVideoIndex].file,
         minDuration: const Duration(seconds: 1),
         maxDuration: const Duration(seconds: 3600),
       );
@@ -306,7 +304,7 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
       // currentScrollOffset = mediaFiles[currentMediaIndex].endOffset;
       //Assigning the VideoEditorController and intializing it
       _nextVideoEditorController = VideoEditorController.file(
-        mediaFiles[currentMediaIndex].file,
+        mediaFiles.value[currentMediaIndex].file,
         minDuration: const Duration(seconds: 1),
         maxDuration: const Duration(seconds: 3600),
       );
@@ -335,7 +333,7 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
           This results in the video jumping back to the 0-second mark when play is pressed.
           
           */
-          final newVideoPosition = mediaFiles[currentMediaIndex]
+          final newVideoPosition = mediaFiles.value[currentMediaIndex]
               .calculateCurrentPosition(_editorScrollController.offset)
               .toInt();
           videoEditorController.value.video
@@ -434,7 +432,7 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
 
   void _updateCurrentScrollOffsetByMilisecond(int videoPositionInMilisecond) {
     // final offset = currentScrollOffset + (videoPositionInMilisecond / 100) * 6;
-    final curentMedia = mediaFiles[currentVideoIndex];
+    final curentMedia = mediaFiles.value[currentVideoIndex];
     final currentStartOffset = curentMedia.startOffset;
     /**
      * Explain for this formula below. As normally, 1000 milisecond is equal to 60 offset.
@@ -482,7 +480,7 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
               ),
               //When the user adding the new file, rebuilt this section to show the new video timeline
               ValueListenableBuilder(
-                  valueListenable: _filesNotifier,
+                  valueListenable: mediaFiles,
                   builder: (context, fileList, child) {
                     return Row(
                       children: List<Widget>.generate(fileList.length, (index) {
@@ -693,15 +691,18 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
                                               );
                                               //Adding the image media to the list
                                               widget.videos.add(media);
-                                              _filesNotifier.value = [
-                                                ..._filesNotifier.value,
+                                              // _filesNotifier.value = [
+                                              //   ..._filesNotifier.value,
+                                              //   media
+                                              // ];
+                                              //Add it to the mediaList
+                                              mediaFiles.value = [
+                                                ...mediaFiles.value,
                                                 media
                                               ];
-                                              //Add it to the mediaList
-                                              mediaFiles.add(media);
                                               //Reassign the totalOffset, start and end offset
                                               calculateStartAndEndOffsetForEachMedia(
-                                                  mediaFiles);
+                                                  mediaFiles.value);
                                               return;
                                             }
 
@@ -717,17 +718,20 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
                                               fileType: mediaType,
                                             );
                                             //Add it to the mediaList
-                                            mediaFiles.add(media);
+                                            mediaFiles.value = [
+                                              ...mediaFiles.value,
+                                              media
+                                            ];
                                             //Reassign the totalOffset, start and end offset
                                             calculateStartAndEndOffsetForEachMedia(
-                                                mediaFiles);
+                                                mediaFiles.value);
                                             log('New video length list: ${widget.videos.length}');
                                             //Adding the video file to the list
                                             widget.videos.add(media);
-                                            _filesNotifier.value = [
-                                              ..._filesNotifier.value,
-                                              media
-                                            ];
+                                            // _filesNotifier.value = [
+                                            //   ..._filesNotifier.value,
+                                            //   media
+                                            // ];
                                             //Navigate to the video editor screen
                                           }
                                         },
@@ -738,7 +742,7 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
                                             'assets/icons/add_text_icon.svg',
                                         onPressed: () {
                                           log('Showing the dialog for adding text');
-                                          log('Image media: ${mediaFiles[1]}');
+                                          log('Image media: ${mediaFiles.value[1]}');
                                           // _buildAddTextDialog(context);
                                         },
                                       ),
@@ -748,9 +752,9 @@ class _VideoEditorPreviewScreenState extends State<VideoEditorPreviewScreen> {
                                             'assets/icons/music_note_icon.svg',
                                         onPressed: () {
                                           log('Showing the dialog for adding audio');
-                                          if (mediaFiles.length > 1) {
-                                            log('The first video information is: ${mediaFiles[0].toString()}');
-                                            log('Next video information is: ${mediaFiles[1].toString()}');
+                                          if (mediaFiles.value.length > 1) {
+                                            log('The first video information is: ${mediaFiles.value[0].toString()}');
+                                            log('Next video information is: ${mediaFiles.value[1].toString()}');
                                           }
                                           log('Current video index: $currentVideoIndex');
                                           // showLoadingStatus(context);
